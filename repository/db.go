@@ -9,11 +9,14 @@ import (
 )
 
 type Repositories struct {
-	User UserRepository
-	db   *sql.DB
+	Role RoleRepository
+	User     UserRepository
+	Category CategoryRepository
+	Post     PostRepository
+	db       *sql.DB
 }
 
-func NewRepositories(configure config.Config) (*Repositories, error) {
+func NewRepositories(configure config.Configuration) (*Repositories, error) {
 	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s",
 		configure.DBHost, configure.DBPort, configure.DBUser, configure.DBName, configure.DBPassword)
 	db, _ := sql.Open(configure.DBDriver, DBURL)
@@ -26,7 +29,10 @@ func NewRepositories(configure config.Config) (*Repositories, error) {
 		fmt.Printf("We are connected to the %s database with url %s\n", configure.DBDriver, DBURL)
 	}
 	return &Repositories{
+		Role: NewRoleRepository(db),
 		User: NewUserRepository(db),
+		Category: NewCategoryRepository(db),
+		Post: NewPostRepository(db),
 		db:   db,
 	}, nil
 }

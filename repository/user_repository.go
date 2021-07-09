@@ -4,26 +4,28 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
-	"golang-youtube-api/models"
+	"golang-youtube-api/model"
 )
 
 type UserRepository interface {
-	Save(user *models.User) (*models.User, error)
-	FindAll() ([]models.User, error)
-	FindById(uuid uuid.UUID) (models.User, error)
-	UpdateById(uuid uuid.UUID, user *models.User) (*models.User, error)
+	Save(user *model.User) (*model.User, error)
+	FindAll() ([]model.User, error)
+	FindById(uuid uuid.UUID) (model.User, error)
+	FindAllByRoleId(id uint64) ([]model.User, error)
+	FindUserByEmailAndPassword(user *model.User) (model.User, error)
+	UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error)
 	DeleteById(uuid uuid.UUID) error
 }
 
-type repo struct {
+type userRepo struct {
 	db *sql.DB
 }
 
 func NewUserRepository(db *sql.DB) UserRepository {
-	return &repo{db}
+	return &userRepo{db}
 }
 
-func (r *repo) Save(user *models.User) (*models.User, error) {
+func (r *userRepo) Save(user *model.User) (*model.User, error) {
 	queryInsert := fmt.Sprintf("INSERT INTO %s (uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at, deleted_at) "+
 		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", "users")
 	stmt, err := r.db.Prepare(queryInsert)
@@ -37,28 +39,27 @@ func (r *repo) Save(user *models.User) (*models.User, error) {
 	return user, err
 }
 
-func (r *repo) FindAll() ([]models.User, error) {
-	var users []models.User
+func (r *userRepo) FindAll() ([]model.User, error) {
+	var users []model.User
 	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at FROM users WHERE deleted_at IS NULL")
 	rows, err := r.db.Query(queryGetUsers)
 	if err != nil {
-		fmt.Println("JANCOK")
 		return users, err
 	}
+	defer rows.Close()
 	for rows.Next() {
-		var user models.User
+		var user model.User
 		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return users, err
 		}
 		users = append(users, user)
 	}
-	defer rows.Close()
 	return users, nil
 }
 
-func (r *repo) FindById(uuid uuid.UUID) (models.User, error) {
-	var user models.User
+func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
+	var user model.User
 	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password," +
 		" role_id, created_at, updated_at FROM users WHERE uuid=$1 AND deleted_at IS NULL")
 	prepare, err := r.db.Prepare(querySelect)
@@ -73,7 +74,38 @@ func (r *repo) FindById(uuid uuid.UUID) (models.User, error) {
 	return user, nil
 }
 
-func (r *repo) UpdateById(uuid uuid.UUID, user *models.User) (*models.User, error) {
+func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
+	var users []model.User
+	query := fmt.Sprintf("select u.uuid, u.first_name, u.last_name, u.email, u.phone_number, u.username,"+
+		" u.password, u.role_id, u.created_at, u.updated_at from users u inner join roles r on r.id = u.role_id where r.id = %d", id)
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return users, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var user model.User
+		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			return users, err
+		}
+		users = append(users, user)
+	}
+	return users, nil
+}
+
+func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error) {
+	var user model.User
+	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at "+
+		"FROM users WHERE (email=$1 OR username=$2) AND password=$3 AND deleted_at IS NULL")
+	err := r.db.QueryRow(queryLogin, u.Email, u.Username, u.Password).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
+func (r *userRepo) UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error) {
 	queryInsert := fmt.Sprintf("UPDATE %s SET uuid = $1, first_name = $2, last_name = $3, email = $4, phone_number = $5,"+
 		"username = $6, password = $7, role_id = $8, updated_at = $9 where uuid = %s", "users", uuid.String())
 	stmt, err := r.db.Prepare(queryInsert)
@@ -88,7 +120,7 @@ func (r *repo) UpdateById(uuid uuid.UUID, user *models.User) (*models.User, erro
 	return user, err
 }
 
-func (r *repo) DeleteById(uuid uuid.UUID) error {
+func (r *userRepo) DeleteById(uuid uuid.UUID) error {
 	queryInsert := fmt.Sprintf("DELETE FROM %s where uuid = %s", "users", uuid.String())
 	_, err := r.db.Prepare(queryInsert)
 	if err != nil {
