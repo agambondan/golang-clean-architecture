@@ -2,12 +2,11 @@ package utils
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang-youtube-api/model"
 	"golang-youtube-api/security"
 	"golang-youtube-api/service"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,14 +22,7 @@ func After(value string, a string) string {
 	if adjustedPos >= len(value) {
 		return ""
 	}
-	return value[adjustedPos:len(value)]
-}
-
-func FailOnError(c *gin.Context, httpStatus int, err error) {
-	if err != nil {
-		c.JSON(httpStatus, err)
-		return
-	}
+	return value[adjustedPos:]
 }
 
 func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]string, error) {
@@ -49,10 +41,9 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 				basename := filepath.Base(file.Filename)
 				regex := After(basename, ".")
 				lowerRegex := strings.ToLower(regex)
-				if lowerRegex[:2] == "pn" || regex[:2] == "jp" {
+				if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
 					dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
 					if dir != "" {
-						fmt.Println("didalem dir 1")
 						err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
 						if err != nil {
 							_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
@@ -68,7 +59,6 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 				filenames = append(filenames, file.Filename)
 			} else {
 				dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
-				fmt.Println("didalem dir 2")
 				if dir != "" {
 					err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
 					if err != nil {
@@ -81,7 +71,6 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 	} else {
 		dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
 		if dir != "" {
-			fmt.Println("didalem dir 3")
 			err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
 			if err != nil {
 				_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
@@ -92,26 +81,56 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 	return filenames, err
 }
 
-func AdminAuthMiddleware(auth security.TokenInterface, redis security.Interface, userService service.UserService, c *gin.Context, checkRole string) (int, string, error) {
+func AdminAuthMiddleware(auth security.TokenInterface, redis security.Interface, userService service.UserService, roleService service.RoleService, c *gin.Context, checkRole string) (model.User, error) {
+	var user model.User
+	var role model.Role
+	var err error
 	//check is the user is authenticated first
 	metadata, err := auth.ExtractTokenMetadata(c.Request)
 	if err != nil {
-		return http.StatusUnauthorized, "unauthorized", err
+		err = errors.New("unauthorized")
+		return user, err
 	}
 	//lookup the metadata in redis:
 	userId, err := redis.FetchAuth(metadata.TokenUuid)
 	if err != nil {
-		return http.StatusUnauthorized, "unauthorized", err
+		err = errors.New("unauthorized")
+		return user, err
 	}
 	if checkRole == "admin" {
-		user, err := userService.FindById(userId)
+		user, err = userService.FindById(userId)
 		if err != nil {
-			return http.StatusBadRequest, "user not found", err
+			err = errors.New("user not found")
+			return user, err
 		}
-		if user.RoleId != 1 {
-			err = errors.New("unauthorized")
-			return http.StatusUnauthorized, "your not admin, unauthorized", err
+		//if user.RoleId != 1 {
+		//	err = errors.New("unauthorized")
+		//	return user, "your not admin, unauthorized", err
+		//}
+		role, err = roleService.FindById(user.RoleId)
+		if err != nil && err.Error() != "" {
+			err = errors.New("role not found")
+			return user, err
 		}
+		user.Role = &role
 	}
-	return http.StatusOK, "admin", err
+	return user, err
+}
+
+func CheckIdUser(auth security.TokenInterface, redis security.Interface, userService service.UserService, c *gin.Context) (model.User, error) {
+	var user model.User
+	var err error
+	extractTokenMetadata, err := auth.ExtractTokenMetadata(c.Request)
+	if err != nil {
+		return user, err
+	}
+	userId, err := redis.FetchAuth(extractTokenMetadata.TokenUuid)
+	if err != nil {
+		return user, err
+	}
+	user, err = userService.FindById(userId)
+	if err != nil {
+		return user, err
+	}
+	return user, err
 }

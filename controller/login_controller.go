@@ -14,7 +14,6 @@ import (
 )
 
 type loginController struct {
-	userRepo    repository.UserRepository
 	userService service.UserService
 	redis       security.Interface
 	auth        security.TokenInterface
@@ -26,16 +25,16 @@ type LoginController interface {
 	Refresh(c *gin.Context)
 }
 
-func NewLoginController(repo repository.UserRepository, redis security.Interface, auth security.TokenInterface) LoginController {
-	newLoginService := service.NewUserService(repo)
-	return &loginController{repo, newLoginService, redis, auth}
+func NewLoginController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) LoginController {
+	newLoginService := service.NewUserService(repo.User)
+	return &loginController{newLoginService, redis, auth}
 }
 
 func (l *loginController) Login(c *gin.Context) {
 	var user *model.User
 	var tokenErr = map[string]string{}
 	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusUnprocessableEntity, "Invalid json provided")
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "Invalid json provided"})
 		return
 	}
 	//validate request:
@@ -46,18 +45,18 @@ func (l *loginController) Login(c *gin.Context) {
 	}
 	u, userErr := l.userService.FindUserByEmailAndPassword(user)
 	if userErr != nil {
-		c.JSON(http.StatusInternalServerError, userErr)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": userErr.Error()})
 		return
 	}
 	ts, tErr := l.auth.CreateToken(u.UUID)
 	if tErr != nil {
 		tokenErr["token_error"] = tErr.Error()
-		c.JSON(http.StatusUnprocessableEntity, tErr.Error())
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": tErr.Error()})
 		return
 	}
 	saveErr := l.redis.CreateAuth(u.UUID, ts)
 	if saveErr != nil {
-		c.JSON(http.StatusInternalServerError, saveErr.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": saveErr.Error()})
 		return
 	}
 	userData := make(map[string]interface{})
@@ -119,7 +118,6 @@ func (l *loginController) Refresh(c *gin.Context) {
 			return
 		}
 		userId := fmt.Sprint(claims["user_id"])
-		fmt.Println(userId)
 		userUUID, err := uuid.Parse(userId)
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, "Error occurred")

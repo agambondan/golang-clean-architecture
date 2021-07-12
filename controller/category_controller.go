@@ -9,7 +9,6 @@ import (
 )
 
 type categoryController struct {
-	categoryRepo    repository.CategoryRepository
 	categoryService service.CategoryService
 	redis           security.Interface
 	auth            security.TokenInterface
@@ -23,9 +22,9 @@ type CategoryController interface {
 	DeleteCategory(c *gin.Context)
 }
 
-func NewCategoryController(repo repository.CategoryRepository, redis security.Interface, auth security.TokenInterface) CategoryController {
-	newCategoryService := service.NewCategoryService(repo)
-	return &categoryController{repo, newCategoryService, redis, auth}
+func NewCategoryController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) CategoryController {
+	newCategoryService := service.NewCategoryService(repo.Category)
+	return &categoryController{newCategoryService, redis, auth}
 }
 
 func (c *categoryController) SaveCategory(ctx *gin.Context) {

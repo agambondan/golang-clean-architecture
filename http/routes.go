@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang-youtube-api/config"
 	"golang-youtube-api/controller"
+	"golang-youtube-api/http/middlewares"
 	"golang-youtube-api/repository"
 	"golang-youtube-api/security"
 	"golang-youtube-api/utils/pages/view"
@@ -23,11 +24,11 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	}
 	newToken := security.NewToken()
 
-	newRoleController := controller.NewRoleController(repositories.Role, newRedisDB.Auth, newToken)
-	newUserController := controller.NewUserController(repositories.User, newRedisDB.Auth, newToken)
-	newCategoryController := controller.NewCategoryController(repositories.Category, newRedisDB.Auth, newToken)
-	newPostController := controller.NewPostController(repositories.Post, repositories.User, newRedisDB.Auth, newToken)
-	newLoginController := controller.NewLoginController(repositories.User, newRedisDB.Auth, newToken)
+	newRoleController := controller.NewRoleController(repositories, newRedisDB.Auth, newToken)
+	newUserController := controller.NewUserController(repositories, newRedisDB.Auth, newToken)
+	newCategoryController := controller.NewCategoryController(repositories, newRedisDB.Auth, newToken)
+	newPostController := controller.NewPostController(repositories, newRedisDB.Auth, newToken)
+	newLoginController := controller.NewLoginController(repositories, newRedisDB.Auth, newToken)
 
 	routes := server.Router
 
@@ -36,15 +37,15 @@ func (server *Server) routes(repositories *repository.Repositories) {
 
 	// Auth Login API
 	routes.POST("/login", newLoginController.Login)
-	routes.POST("/logout", newLoginController.Logout)
-	routes.POST("/refresh", newLoginController.Refresh)
+	routes.POST("/logout", middlewares.AuthMiddleware(), newLoginController.Logout)
+	routes.POST("/refresh", middlewares.AuthMiddleware(), newLoginController.Refresh)
 
 	// Role API
-	routes.POST("/role", newRoleController.SaveRole)
-	routes.GET("/roles", newRoleController.GetRoles)
-	routes.GET("/role/:id", newRoleController.GetRole)
-	routes.PUT("/role/:id", newRoleController.UpdateRole)
-	routes.DELETE("/role/:id", newRoleController.DeleteRole)
+	routes.POST("/role", middlewares.AuthMiddleware(),newRoleController.SaveRole)
+	routes.GET("/roles", middlewares.AuthMiddleware(), newRoleController.GetRoles)
+	routes.GET("/role/:id", middlewares.AuthMiddleware(),newRoleController.GetRole)
+	routes.PUT("/role/:id", middlewares.AuthMiddleware(),newRoleController.UpdateRole)
+	routes.DELETE("/role/:id", middlewares.AuthMiddleware(),newRoleController.DeleteRole)
 
 	// Users API
 	routes.POST("/user", newUserController.SaveUser)

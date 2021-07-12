@@ -26,11 +26,11 @@ var _ TokenInterface = &Token{}
 
 func (t *Token) CreateToken(userUUID uuid.UUID) (*TokenDetails, error) {
 	td := &TokenDetails{}
-	td.AtExpires = time.Now().Add(time.Hour * 48).Unix()
+	td.AtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
 	newUUID, _ := uuid.NewUUID()
 	td.TokenUuid = newUUID.String()
 
-	td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
+	td.RtExpires = time.Now().Add(time.Hour * 24 * 30).Unix()
 	td.RefreshUuid = td.TokenUuid + "++" + userUUID.String()
 
 	var err error
@@ -95,7 +95,6 @@ func ExtractToken(r *http.Request) string {
 }
 
 func (t *Token) ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
-	//fmt.Println("WE ENTERED METADATA EXTRACT TOKEN METADA 98")
 	token, err := VerifyToken(r)
 	if err != nil {
 		return nil, err
@@ -116,6 +115,5 @@ func (t *Token) ExtractTokenMetadata(r *http.Request) (*AccessDetails, error) {
 			UserUUID:  userUUID,
 		}, nil
 	}
-	fmt.Println(r.Body)
 	return nil, err
 }

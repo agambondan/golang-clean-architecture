@@ -73,7 +73,6 @@ func (tk *ClientData) FetchAuth(tokenUuid string) (uuid.UUID, error) {
 func (tk *ClientData) DeleteTokens(authD *AccessDetails) error {
 	//get the refresh uuid
 	refreshUuid := fmt.Sprintf("%s++%s", authD.TokenUuid, authD.UserUUID.String())
-	fmt.Println(refreshUuid)
 	//delete access token
 	deletedAt, err := tk.client.Del(authD.TokenUuid).Result()
 	if err != nil {

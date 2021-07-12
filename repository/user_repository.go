@@ -96,7 +96,7 @@ func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 
 func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error) {
 	var user model.User
-	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at "+
+	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at " +
 		"FROM users WHERE (email=$1 OR username=$2) AND password=$3 AND deleted_at IS NULL")
 	err := r.db.QueryRow(queryLogin, u.Email, u.Username, u.Password).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
@@ -106,14 +106,14 @@ func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error)
 }
 
 func (r *userRepo) UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error) {
-	queryInsert := fmt.Sprintf("UPDATE %s SET uuid = $1, first_name = $2, last_name = $3, email = $4, phone_number = $5,"+
-		"username = $6, password = $7, role_id = $8, updated_at = $9 where uuid = %s", "users", uuid.String())
+	queryInsert := fmt.Sprint("UPDATE users SET first_name = $1, last_name = $2, email = $3, phone_number = $4," +
+		"username = $5, password = $6, role_id = $7, updated_at = $8 where uuid = $9")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return user, err
 	}
-	_, err = stmt.Exec(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber,
-		&user.Username, &user.Password, &user.RoleId, &user.UpdatedAt)
+	_, err = stmt.Exec(&user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber,
+		&user.Username, &user.Password, &user.RoleId, &user.UpdatedAt, uuid.String())
 	if err != nil {
 		return user, err
 	}

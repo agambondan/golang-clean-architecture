@@ -10,7 +10,6 @@ import (
 )
 
 type postController struct {
-	postRepo    repository.PostRepository
 	postService service.PostService
 	userService service.UserService
 	redis       security.Interface
@@ -27,10 +26,10 @@ type PostController interface {
 	DeletePost(c *gin.Context)
 }
 
-func NewPostController(postRepo repository.PostRepository, userRepo repository.UserRepository, redis security.Interface, auth security.TokenInterface) PostController {
-	newPostService := service.NewPostService(postRepo)
-	newUserService := service.NewUserService(userRepo)
-	return &postController{postRepo, newPostService, newUserService, redis, auth}
+func NewPostController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) PostController {
+	newPostService := service.NewPostService(repo.Post)
+	newUserService := service.NewUserService(repo.User)
+	return &postController{newPostService, newUserService, redis, auth}
 }
 
 func (p *postController) SavePost(ctx *gin.Context) {

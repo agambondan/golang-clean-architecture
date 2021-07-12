@@ -46,9 +46,9 @@ func (s *userService) FindUserByEmailAndPassword(user *model.User) (model.User, 
 }
 
 func (s *userService) UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error) {
-	return s.UpdateById(uuid, user)
+	return s.user.UpdateById(uuid, user)
 }
 
 func (s *userService) DeleteById(uuid uuid.UUID) error {
-	return s.DeleteById(uuid)
+	return s.user.DeleteById(uuid)
 }
