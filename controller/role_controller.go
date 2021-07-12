@@ -58,33 +58,83 @@ func (c *roleController) SaveRole(ctx *gin.Context) {
 }
 
 func (c *roleController) GetRoles(ctx *gin.Context) {
-	roles, err := c.roleService.FindAll()
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if userCheck.Role.Name != "admin" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		return
+	} else {
+		roles, err := c.roleService.FindAll()
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+		ctx.JSON(http.StatusOK, roles)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"roles": roles})
 }
 
 func (c *roleController) GetRole(ctx *gin.Context) {
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if userCheck.Role.Name != "admin" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		return
+	} else {
+		idParam := ctx.Param("id")
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+		roleFindById, err := c.roleService.FindById(uint64(id))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, err)
+			return
+		}
+		ctx.JSON(http.StatusOK, roleFindById)
 		return
 	}
-	roleFindById, err := c.roleService.FindById(uint64(id))
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, err)
-		return
-	}
-	ctx.JSON(http.StatusOK, roleFindById)
 }
 
 func (c *roleController) UpdateRole(ctx *gin.Context) {
-	panic("implement me")
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if userCheck.Role.Name != "admin" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		return
+	} else {
+		idParam := ctx.Param("id")
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+		roleFindById, err := c.roleService.FindById(uint64(id))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, err)
+			return
+		}
+		ctx.JSON(http.StatusOK, roleFindById)
+		return
+	}
 }
 
 func (c *roleController) DeleteRole(ctx *gin.Context) {
-	panic("implement me")
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if userCheck.Role.Name != "admin" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		return
+	} else {
+		idParam := ctx.Param("id")
+		id, err := strconv.Atoi(idParam)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+		err = c.roleService.DeleteById(uint64(id))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, err)
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"message": "Successfully delete role"})
+		return
+	}
 }
