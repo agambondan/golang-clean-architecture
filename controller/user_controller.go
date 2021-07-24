@@ -10,6 +10,7 @@ import (
 	"golang-youtube-api/utils"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type userController struct {
@@ -60,6 +61,23 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 			return
 		}
 	}
+	roleFindById, err := c.roleService.FindById(user.RoleId)
+	if err != nil || roleFindById.Name == "" {
+		role := model.Role{}
+		role.Prepare()
+		role.ID = 1
+		role.Name = "admin"
+		_, err = c.roleService.Create(&role)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+	}
+	roleFindById, err = c.roleService.FindById(user.RoleId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Role not found"})
+		return
+	}
 	validate := user.Validate("")
 	if len(validate) != 0 {
 		ctx.JSON(http.StatusBadRequest, validate)
@@ -71,6 +89,7 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
+	user.Image = strings.Join(filenames, ", ")
 	userCreate, err := c.userService.Create(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
@@ -118,7 +137,8 @@ func (c *userController) GetUser(ctx *gin.Context) {
 			ctx.JSON(http.StatusOK, user)
 			return
 		} else {
-			ctx.JSON(http.StatusOK, user.PublicUser())
+			//ctx.JSON(http.StatusOK, user.PublicUser())
+			ctx.JSON(http.StatusOK, gin.H{"message": "unauthorized"})
 			return
 		}
 	}
@@ -193,14 +213,15 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 		user.UUID = checkIdUser.UUID
 		if contentType != "application/json" {
 			filenames, err = utils.CreateUploadPhoto(ctx, user.UUID, "/user")
-		} else {
-			userUpdateById, err := c.userService.UpdateById(uuid, &user)
-			if err != nil {
-				ctx.JSON(http.StatusUnprocessableEntity, err)
-				return
-			}
-			ctx.JSON(http.StatusOK, gin.H{"data": userUpdateById, "filenames": filenames})
+			user.Image = strings.Join(filenames, "")
 		}
+		userUpdateById, err := c.userService.UpdateById(uuid, &user)
+		if err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, err)
+			return
+		}
+		userUpdateById.CreatedAt = checkIdUser.CreatedAt
+		ctx.JSON(http.StatusOK, gin.H{"data": userUpdateById, "filenames": filenames})
 	}
 }
 
@@ -212,7 +233,7 @@ func (c *userController) DeleteUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	if checkIdUser.UUID != uuid && checkIdUser.RoleId != 1{
+	if checkIdUser.UUID != uuid && checkIdUser.RoleId != 1 {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
 		return
 	} else {

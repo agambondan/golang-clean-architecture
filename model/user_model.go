@@ -16,12 +16,13 @@ type User struct {
 	PhoneNumber string    `json:"phone_number,omitempty"`
 	Username    string    `json:"username,omitempty"`
 	Password    string    `json:"password,omitempty"`
+	Image       string    `json:"image,omitempty"`
 	RoleId      uint64    `json:"role_id,omitempty"`
 	Posts       []Post    `json:"posts,omitempty"`
 	Role        *Role     `json:"role,omitempty"`
-	CreatedAt   time.Time `json:"created_at,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at,omitempty"`
-	DeletedAt   time.Time `sql:"index" json:"deleted_at,omitempty"`
+	CreatedAt   time.Time `json:"created_at,string,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at,string,omitempty"`
+	DeletedAt   time.Time `sql:"index" json:"deleted_at,string,omitempty"`
 }
 
 type PublicUser struct {

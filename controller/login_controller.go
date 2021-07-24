@@ -132,13 +132,13 @@ func (l *loginController) Refresh(c *gin.Context) {
 		//Create new pairs of refresh and access tokens
 		ts, createErr := l.auth.CreateToken(userUUID)
 		if createErr != nil {
-			c.JSON(http.StatusForbidden, createErr.Error())
+			c.JSON(http.StatusForbidden, gin.H{"error": createErr.Error()})
 			return
 		}
 		//save the tokens metadata to redis
 		saveErr := l.redis.CreateAuth(userUUID, ts)
 		if saveErr != nil {
-			c.JSON(http.StatusForbidden, saveErr.Error())
+			c.JSON(http.StatusForbidden, gin.H{"error": saveErr.Error()})
 			return
 		}
 		tokens := map[string]string{
@@ -147,6 +147,6 @@ func (l *loginController) Refresh(c *gin.Context) {
 		}
 		c.JSON(http.StatusCreated, tokens)
 	} else {
-		c.JSON(http.StatusUnauthorized, "refresh token expired")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "refresh token expired"})
 	}
 }

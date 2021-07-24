@@ -7,30 +7,50 @@ import (
 )
 
 type Category struct {
-	ID        int       `sql:"primary_key" json:"id,omitempty"`
+	ID        uint64    `sql:"primary_key" json:"id,omitempty"`
 	Name      string    `json:"name,omitempty"`
-	Posts     []Post    `json:"posts,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	DeletedAt time.Time `sql:"index" json:"deleted_at,omitempty"`
+	Posts     []Post    `json:"categories,omitempty"`
+	CreatedAt time.Time `json:"created_at,string,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,string,omitempty"`
+	DeletedAt time.Time `sql:"index" json:"deleted_at,string,omitempty"`
 }
 
-func (r *Category) Prepare() {
-	r.Name = html.EscapeString(strings.TrimSpace(r.Name))
-	r.CreatedAt = time.Now()
-	r.UpdatedAt = time.Now()
+type Categories []Category
+
+// Categories So that we dont expose the user's email address and password to the world
+func (categories Categories) Categories() []interface{} {
+	result := make([]interface{}, len(categories))
+	for index, category := range categories {
+		result[index] = category.Category()
+	}
+	return result
 }
 
-func (r *Category) Validate(action string) map[string]string {
+func (c *Category) Category() interface{} {
+	return &Category{
+		ID:        c.ID,
+		Name:      c.Name,
+		CreatedAt: c.CreatedAt,
+		UpdatedAt: c.UpdatedAt,
+	}
+}
+
+func (c *Category) Prepare() {
+	c.Name = html.EscapeString(strings.TrimSpace(c.Name))
+	c.CreatedAt = time.Now()
+	c.UpdatedAt = time.Now()
+}
+
+func (c *Category) Validate(action string) map[string]string {
 	var errorMessages = make(map[string]string)
 
 	switch strings.ToLower(action) {
 	case "update":
-		if r.Name == "" || r.Name == "null" {
+		if c.Name == "" || c.Name == "null" {
 			errorMessages["name_required"] = "name is required"
 		}
 	default:
-		if r.Name == "" || r.Name == "null" {
+		if c.Name == "" || c.Name == "null" {
 			errorMessages["name_required"] = "name is required"
 		}
 	}

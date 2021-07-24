@@ -2,18 +2,24 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"golang-youtube-api/model"
 	"golang-youtube-api/repository"
 	"golang-youtube-api/security"
 	"golang-youtube-api/service"
+	"golang-youtube-api/utils"
+	"log"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 type postController struct {
-	postService service.PostService
-	userService service.UserService
-	redis       security.Interface
-	auth        security.TokenInterface
+	postService         service.PostService
+	userService         service.UserService
+	postCategoryService service.PostCategoryService
+	redis               security.Interface
+	auth                security.TokenInterface
 }
 
 type PostController interface {
@@ -21,6 +27,7 @@ type PostController interface {
 	GetPosts(c *gin.Context)
 	GetPost(c *gin.Context)
 	GetPostsByUserId(c *gin.Context)
+	GetPostsByUsername(c *gin.Context)
 	GetPostsByCategoryId(c *gin.Context)
 	UpdatePost(c *gin.Context)
 	DeletePost(c *gin.Context)
@@ -29,11 +36,60 @@ type PostController interface {
 func NewPostController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) PostController {
 	newPostService := service.NewPostService(repo.Post)
 	newUserService := service.NewUserService(repo.User)
-	return &postController{newPostService, newUserService, redis, auth}
+	newPostCategoryService := service.NewPostCategoryService(repo.PostCategory)
+	return &postController{newPostService, newUserService, newPostCategoryService, redis, auth}
 }
 
 func (p *postController) SavePost(ctx *gin.Context) {
-	panic("implement me")
+	var post model.Post
+	post.Prepare()
+	checkIdUser, err := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	title := ctx.PostForm("title")
+	description := ctx.PostForm("description")
+	categoryArray := ctx.PostFormArray("categories")
+	if title != "" && description != "" {
+		post.Title = title
+		post.Description = description
+	} else {
+		if err = ctx.ShouldBindJSON(&post); err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error": "invalid json",
+			})
+			return
+		}
+	}
+	post.UserUUID = checkIdUser.UUID
+	validate := post.Validate("")
+	if len(validate) != 0 {
+		ctx.JSON(http.StatusBadRequest, validate)
+		return
+	}
+	post.Author = checkIdUser
+	postCreate, err := p.postService.Create(&post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID, "/post")
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	post.PostImage = strings.Join(filenames, "")
+	for j := 0; j < len(categoryArray); j++ {
+		var postCategory = model.PostCategory{}
+		postCategory.CategoryID, _ = strconv.ParseUint(categoryArray[j], 10, 64)
+		postCategory.PostID = post.ID
+		_, err = p.postCategoryService.Create(&postCategory)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	ctx.JSON(http.StatusOK, gin.H{"data": postCreate, "filenames": filenames})
 }
 
 func (p *postController) GetPosts(ctx *gin.Context) {
@@ -43,25 +99,181 @@ func (p *postController) GetPosts(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"posts": posts.PublicPosts()})
+	ctx.JSON(http.StatusOK, posts.PublicPosts())
 }
 
 func (p *postController) GetPost(ctx *gin.Context) {
-	panic("implement me")
+	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	//if err != nil {
+	//	ctx.JSON(http.StatusUnauthorized, err)
+	//	return
+	//}
+	idParam := ctx.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	post, err := p.postService.FindById(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	userFindById, err := p.userService.FindById(post.UserUUID)
+	if err != nil {
+		return
+	}
+	post.Author = userFindById
+	if checkIdUser.RoleId != 1 || post.UserUUID != checkIdUser.UUID {
+		ctx.JSON(http.StatusOK, post.PublicPost())
+		return
+	} else {
+		ctx.JSON(http.StatusOK, post)
+	}
 }
 
 func (p *postController) GetPostsByUserId(ctx *gin.Context) {
-	panic("implement me")
+	posts := model.Posts{}
+	idParam := ctx.Param("id")
+	id := uuid.MustParse(idParam)
+	posts, err := p.postService.FindAllByUserId(id)
+	for i := 0; i < len(posts); i++ {
+		posts[i].Author, err = p.userService.FindById(posts[i].UserUUID)
+		if err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, err)
+			return
+		}
+	}
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, posts)
+}
+
+func (p *postController) GetPostsByUsername(ctx *gin.Context) {
+	posts := model.Posts{}
+	username := ctx.Param("username")
+	posts, err := p.postService.FindAllByUsername(username)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+		return
+	}
+	ctx.JSON(http.StatusOK, posts.PublicPosts())
 }
 
 func (p *postController) GetPostsByCategoryId(ctx *gin.Context) {
-	panic("implement me")
+	posts := model.Posts{}
+	idParam := ctx.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	posts, err = p.postService.FindAllByCategoryId(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+		return
+	}
+	ctx.JSON(http.StatusOK, posts.PublicPosts())
 }
 
 func (p *postController) UpdatePost(ctx *gin.Context) {
-	panic("implement me")
+	var post model.Post
+	post.Prepare()
+	checkIdUser, err := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	idParam := ctx.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	postFindById, err := p.postService.FindById(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	if postFindById.UserUUID != checkIdUser.UUID {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
+		return
+	} else {
+		title := ctx.PostForm("title")
+		description := ctx.PostForm("description")
+		categoryArray := ctx.PostFormArray("categories")
+		if title != "" && description != "" {
+			post.Title = title
+			post.Description = description
+		} else {
+			if err = ctx.ShouldBindJSON(&post); err != nil {
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+					"error": "invalid json",
+				})
+				return
+			}
+		}
+		post.UserUUID = checkIdUser.UUID
+		validate := post.Validate("")
+		if len(validate) != 0 {
+			ctx.JSON(http.StatusBadRequest, validate)
+			return
+		}
+		post.Author = checkIdUser
+		postUpdate, err := p.postService.UpdateById(uint64(id), &post)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+		filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID, "/post")
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			return
+		}
+		postUpdate.CreatedAt = postFindById.CreatedAt
+		post.PostImage = strings.Join(filenames, "")
+		for j := 0; j < len(categoryArray); j++ {
+			var postCategory = model.PostCategory{}
+			postCategory.CategoryID, _ = strconv.ParseUint(categoryArray[j], 10, 64)
+			postCategory.PostID = post.ID
+			_, err = p.postCategoryService.UpdateById(uint64(id), &postCategory)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+		ctx.JSON(http.StatusOK, gin.H{"data": postUpdate, "filenames": filenames})
+	}
 }
 
 func (p *postController) DeletePost(ctx *gin.Context) {
-	panic("implement me")
+	checkIdUser, err := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, err)
+		return
+	}
+	idParam := ctx.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	postFindById, err := p.postService.FindById(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	if postFindById.UserUUID != checkIdUser.UUID {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "unauthorized"})
+		return
+	} else {
+		err = p.postService.DeleteById(uint64(id))
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, err)
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"message": "Delete Successfully"})
+		return
+	}
 }

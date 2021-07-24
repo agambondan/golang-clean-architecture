@@ -44,7 +44,7 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 				if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
 					dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
 					if dir != "" {
-						err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+						err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
 						if err != nil {
 							_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
 							_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
@@ -52,7 +52,7 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 					}
 				}
 				filename := filepath.Join("./assets/images/", userId.String(), pathFolder, basename)
-				err := c.SaveUploadedFile(file, filename)
+				err = c.SaveUploadedFile(file, filename)
 				if err != nil {
 					return filenames, err
 				}
@@ -60,7 +60,7 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 			} else {
 				dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
 				if dir != "" {
-					err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+					err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
 					if err != nil {
 						_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
 						_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
@@ -81,10 +81,13 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 	return filenames, err
 }
 
+func UpdateUploadPhoto() {
+
+}
+
 func AdminAuthMiddleware(auth security.TokenInterface, redis security.Interface, userService service.UserService, roleService service.RoleService, c *gin.Context, checkRole string) (model.User, error) {
 	var user model.User
 	var role model.Role
-	var err error
 	//check is the user is authenticated first
 	metadata, err := auth.ExtractTokenMetadata(c.Request)
 	if err != nil {
@@ -103,16 +106,16 @@ func AdminAuthMiddleware(auth security.TokenInterface, redis security.Interface,
 			err = errors.New("user not found")
 			return user, err
 		}
-		//if user.RoleId != 1 {
-		//	err = errors.New("unauthorized")
-		//	return user, "your not admin, unauthorized", err
-		//}
 		role, err = roleService.FindById(user.RoleId)
 		if err != nil && err.Error() != "" {
 			err = errors.New("role not found")
 			return user, err
 		}
 		user.Role = &role
+		//if user.RoleId != 1 {
+		//	err = errors.New("your not admin, unauthorized")
+		//	return user, err
+		//}
 	}
 	return user, err
 }

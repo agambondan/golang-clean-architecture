@@ -20,6 +20,7 @@ type PostService interface {
 	FindAll() ([]model.Post, error)
 	FindById(id uint64) (model.Post, error)
 	FindAllByUserId(uuid uuid.UUID) ([]model.Post, error)
+	FindAllByUsername(username string) ([]model.Post, error)
 	FindAllByCategoryId(id uint64) ([]model.Post, error)
 	UpdateById(id uint64, post *model.Post) (*model.Post, error)
 	DeleteById(id uint64) error
@@ -39,6 +40,10 @@ func (p *postService) FindById(id uint64) (model.Post, error) {
 
 func (p *postService) FindAllByUserId(uuid uuid.UUID) ([]model.Post, error) {
 	return p.post.FindAllByUserId(uuid)
+}
+
+func (p *postService) FindAllByUsername(username string) ([]model.Post, error) {
+	return p.post.FindAllByUsername(username)
 }
 
 func (p *postService) FindAllByCategoryId(id uint64) ([]model.Post, error) {

@@ -8,12 +8,13 @@ import (
 )
 
 var (
-	server    http.Server
-	configure config.Configuration
+	server      http.Server
+	configure   config.Configuration
+	pathFileEnv = "/home/agam/IdeaProjects/golang-youtube-api/.env"
 )
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(pathFileEnv); err != nil {
 		log.Println("no env gotten")
 	}
 }

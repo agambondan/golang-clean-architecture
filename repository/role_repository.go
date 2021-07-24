@@ -23,13 +23,13 @@ func NewRoleRepository(db *sql.DB) RoleRepository {
 }
 
 func (r *roleRepo) Save(role *model.Role) (*model.Role, error) {
-	queryInsert := fmt.Sprintf("insert into %s (id, name, created_at, updated_at, deleted_at) "+
-		"VALUES ($1, $2, $3, $4, $5)", "roles")
+	queryInsert := fmt.Sprintf("insert into %s (name, created_at, updated_at, deleted_at) "+
+		"VALUES ($1, $2, $3, $4) returning id", "roles")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return role, err
 	}
-	_, err = stmt.Exec(&role.ID, &role.Name, &role.CreatedAt, &role.UpdatedAt, nil)
+	err = stmt.QueryRow(&role.Name, &role.CreatedAt, &role.UpdatedAt, nil).Scan(&role.ID)
 	if err != nil {
 		return role, err
 	}
@@ -69,12 +69,13 @@ func (r *roleRepo) FindById(id uint64) (model.Role, error) {
 }
 
 func (r *roleRepo) UpdateById(id uint64, role *model.Role) (*model.Role, error) {
-	query := fmt.Sprintf("update users set name = $1, updated_at = $2 where id = %d", id)
+	query := fmt.Sprintf("update roles set name = $1, updated_at = $2 where id = %d", id)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return role, err
 	}
 	_, err = stmt.Exec(&role.Name, &role.UpdatedAt)
+	role.ID = id
 	if err != nil {
 		return role, err
 	}
@@ -82,10 +83,11 @@ func (r *roleRepo) UpdateById(id uint64, role *model.Role) (*model.Role, error) 
 }
 
 func (r *roleRepo) DeleteById(id uint64) error {
-	queryInsert := fmt.Sprintf("delete From roles where id = %d", id)
-	_, err := r.db.Prepare(queryInsert)
+	query := fmt.Sprintf("delete from roles where id = %d", id)
+	_, err := r.db.Prepare(query)
 	if err != nil {
 		return err
 	}
+	r.db.Exec(query)
 	return err
 }

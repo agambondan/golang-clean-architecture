@@ -9,9 +9,9 @@ import (
 type Role struct {
 	ID        uint64    `json:"id"`
 	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	DeletedAt time.Time `sql:"index" json:"deleted_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,string,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,string,omitempty"`
+	DeletedAt time.Time `sql:"index" json:"deleted_at,string,omitempty"`
 }
 
 func (r *Role) Prepare() {

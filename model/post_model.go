@@ -14,11 +14,10 @@ type Post struct {
 	Description string    `json:"description,omitempty"`
 	PostImage   string    `json:"post_image,omitempty"`
 	Author      User      `json:"author,omitempty"`
-	Labels      []string  `json:"labels,omitempty"`
 	Categories  []string  `json:"categories,omitempty"`
 	CreatedAt   time.Time `json:"created_at,string,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,string,omitempty"`
-	DeletedAt   time.Time `sql:"index" json:",string,omitempty"`
+	DeletedAt   time.Time `sql:"index" json:"deleted_at,string,omitempty"`
 }
 
 type PublicPost struct {
@@ -83,6 +82,9 @@ func (p *Post) Validate(action string) map[string]string {
 		}
 		if p.Description == "" || p.Description == "null" {
 			errorMessages["desc_required"] = "description is required"
+		}
+		if p.UserUUID.String() == "" || p.UserUUID.String() == "null" {
+			errorMessages["user_required"] = "user uuid is required"
 		}
 	}
 	return errorMessages

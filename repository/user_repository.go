@@ -26,13 +26,13 @@ func NewUserRepository(db *sql.DB) UserRepository {
 }
 
 func (r *userRepo) Save(user *model.User) (*model.User, error) {
-	queryInsert := fmt.Sprintf("INSERT INTO %s (uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at, deleted_at) "+
-		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", "users")
+	queryInsert := fmt.Sprintf("INSERT INTO %s (uuid, first_name, last_name, email, phone_number, username, password, image, role_id, created_at, updated_at, deleted_at) "+
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)", "users")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return user, err
 	}
-	_, err = stmt.Exec(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt, nil)
+	_, err = stmt.Exec(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.RoleId, &user.CreatedAt, &user.UpdatedAt, nil)
 	if err != nil {
 		return user, err
 	}
@@ -41,7 +41,8 @@ func (r *userRepo) Save(user *model.User) (*model.User, error) {
 
 func (r *userRepo) FindAll() ([]model.User, error) {
 	var users []model.User
-	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at FROM users WHERE deleted_at IS NULL")
+	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password," +
+		" image, role_id, created_at, updated_at FROM users WHERE deleted_at IS NULL")
 	rows, err := r.db.Query(queryGetUsers)
 	if err != nil {
 		return users, err
@@ -49,7 +50,8 @@ func (r *userRepo) FindAll() ([]model.User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user model.User
-		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+		err = rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username,
+			&user.Password, &user.Image, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return users, err
 		}
@@ -60,14 +62,14 @@ func (r *userRepo) FindAll() ([]model.User, error) {
 
 func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
 	var user model.User
-	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password," +
+	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, image," +
 		" role_id, created_at, updated_at FROM users WHERE uuid=$1 AND deleted_at IS NULL")
 	prepare, err := r.db.Prepare(querySelect)
 	if err != nil {
 		return user, err
 	}
 	err = prepare.QueryRow(uuid).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber,
-		&user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+		&user.Username, &user.Password, &user.Image, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
 	}
@@ -76,7 +78,7 @@ func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
 
 func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 	var users []model.User
-	query := fmt.Sprintf("select u.uuid, u.first_name, u.last_name, u.email, u.phone_number, u.username,"+
+	query := fmt.Sprintf("select u.uuid, u.first_name, u.last_name, u.email, u.phone_number, u.username, u.image,"+
 		" u.password, u.role_id, u.created_at, u.updated_at from users u inner join roles r on r.id = u.role_id where r.id = %d", id)
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -85,7 +87,8 @@ func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user model.User
-		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username,
+			&user.Password, &user.Image, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return users, err
 		}
@@ -96,9 +99,10 @@ func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 
 func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error) {
 	var user model.User
-	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, role_id, created_at, updated_at " +
-		"FROM users WHERE (email=$1 OR username=$2) AND password=$3 AND deleted_at IS NULL")
-	err := r.db.QueryRow(queryLogin, u.Email, u.Username, u.Password).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, image, role_id, " +
+		"created_at, updated_at FROM users WHERE (email=$1 OR username=$2) AND password=$3 AND deleted_at IS NULL")
+	err := r.db.QueryRow(queryLogin, u.Email, u.Username, u.Password).Scan(&user.UUID, &user.FirstName, &user.LastName,
+		&user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
 	}
@@ -107,13 +111,13 @@ func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error)
 
 func (r *userRepo) UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error) {
 	queryInsert := fmt.Sprint("UPDATE users SET first_name = $1, last_name = $2, email = $3, phone_number = $4," +
-		"username = $5, password = $6, role_id = $7, updated_at = $8 where uuid = $9")
+		"username = $5, password = $6, image = $7, role_id = $8, updated_at = $9 where uuid = $10")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return user, err
 	}
 	_, err = stmt.Exec(&user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber,
-		&user.Username, &user.Password, &user.RoleId, &user.UpdatedAt, uuid.String())
+		&user.Username, &user.Password, &user.Image, &user.RoleId, &user.UpdatedAt, uuid.String())
 	if err != nil {
 		return user, err
 	}

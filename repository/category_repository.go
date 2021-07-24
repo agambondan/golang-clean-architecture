@@ -23,13 +23,13 @@ func NewCategoryRepository(db *sql.DB) CategoryRepository {
 }
 
 func (r *categoryRepo) Save(category *model.Category) (*model.Category, error) {
-	queryInsert := fmt.Sprintf("insert into %s (id, name, created_at, updated_at, deleted_at) "+
-		"VALUES ($1, $2, $3, $4, $5)", "categories")
+	queryInsert := fmt.Sprintf("insert into %s (name, created_at, updated_at, deleted_at) "+
+		"VALUES ($1, $2, $3, $4) returning id", "categories")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return category, err
 	}
-	_, err = stmt.Exec(&category.ID, &category.Name, &category.CreatedAt, &category.UpdatedAt, nil)
+	err = stmt.QueryRow(&category.Name, &category.CreatedAt, &category.UpdatedAt, nil).Scan(&category.ID)
 	if err != nil {
 		return category, err
 	}
@@ -40,7 +40,11 @@ func (r *categoryRepo) FindAll() ([]model.Category, error) {
 	var categories []model.Category
 	var category model.Category
 	query := fmt.Sprintf("select id, name, created_at, updated_at from categories where deleted_at is null")
-	rows, err := r.db.Query(query)
+	stmt, err := r.db.Prepare(query)
+	if err != nil {
+		return categories, err
+	}
+	rows, err := stmt.Query()
 	if err != nil {
 		return categories, err
 	}
@@ -69,12 +73,13 @@ func (r *categoryRepo) FindById(id uint64) (model.Category, error) {
 }
 
 func (r *categoryRepo) UpdateById(id uint64, category *model.Category) (*model.Category, error) {
-	query := fmt.Sprintf("update users set name = $1, updated_at = $2 where id = %d", id)
+	query := fmt.Sprintf("update categories set name = $1, updated_at = $2 where id = %d", id)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return category, err
 	}
 	_, err = stmt.Exec(&category.Name, &category.UpdatedAt)
+	category.ID = id
 	if err != nil {
 		return category, err
 	}
