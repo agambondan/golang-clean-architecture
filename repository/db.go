@@ -18,7 +18,7 @@ type Repositories struct {
 }
 
 func NewRepositories(configure config.Configuration) (*Repositories, error) {
-	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s",
+	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=require password=%s",
 		configure.DBHost, configure.DBPort, configure.DBUser, configure.DBName, configure.DBPassword)
 	db, _ := sql.Open(configure.DBDriver, DBURL)
 	err := db.Ping()
