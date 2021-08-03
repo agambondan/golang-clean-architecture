@@ -45,6 +45,10 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 	username := ctx.PostForm("username")
 	phoneNumber := ctx.PostForm("phone_number")
 	roleID := ctx.PostForm("role_id")
+	instagram := ctx.PostForm("instagram")
+	facebook := ctx.PostForm("facebook")
+	twitter := ctx.PostForm("twitter")
+	linkedIn := ctx.PostForm("linkedin")
 	if firstName != "" && lastName != "" && email != "" {
 		user.FirstName = firstName
 		user.LastName = lastName
@@ -53,6 +57,10 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		user.Username = username
 		user.PhoneNumber = phoneNumber
 		user.RoleId, _ = strconv.ParseUint(roleID, 10, 64)
+		user.Instagram = instagram
+		user.Facebook = facebook
+		user.Twitter = twitter
+		user.LinkedIn = linkedIn
 	} else {
 		if err = ctx.ShouldBindJSON(&user); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -89,7 +97,7 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	user.Image = strings.Join(filenames, ", ")
+	user.PhotoProfile = strings.Join(filenames, ", ")
 	userCreate, err := c.userService.Create(&user)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
@@ -100,7 +108,17 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 
 func (c *userController) GetUsers(ctx *gin.Context) {
 	var users model.Users
-	users, err := c.userService.FindAll()
+	var limit int
+	var err error
+	queryParamLimit := ctx.Query("_limit")
+	if queryParamLimit != "" {
+		limit, err = strconv.Atoi(queryParamLimit)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
+	users, err = c.userService.FindAll(limit)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
@@ -122,8 +140,8 @@ func (c *userController) GetUsers(ctx *gin.Context) {
 
 func (c *userController) GetUser(ctx *gin.Context) {
 	idParam := ctx.Param("id")
-	uuid := uuid.MustParse(idParam)
-	user, err := c.userService.FindById(uuid)
+	uuidParam := uuid.MustParse(idParam)
+	user, err := c.userService.FindById(uuidParam)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -133,7 +151,7 @@ func (c *userController) GetUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	} else {
-		if userCheck.Role.Name == "admin" || userCheck.UUID == uuid {
+		if userCheck.Role.Name == "admin" || userCheck.UUID == uuidParam {
 			ctx.JSON(http.StatusOK, user)
 			return
 		} else {
@@ -177,13 +195,13 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 	var user model.User
 	user.Prepare()
 	idParam := ctx.Param("id")
-	uuid := uuid.MustParse(idParam)
+	uuidParam := uuid.MustParse(idParam)
 	checkIdUser, err := utils.CheckIdUser(c.auth, c.redis, c.userService, ctx)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	if checkIdUser.UUID != uuid && checkIdUser.RoleId != 1 {
+	if checkIdUser.UUID != uuidParam && checkIdUser.RoleId != 1 {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
 		return
 	} else {
@@ -213,9 +231,9 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 		user.UUID = checkIdUser.UUID
 		if contentType != "application/json" {
 			filenames, err = utils.CreateUploadPhoto(ctx, user.UUID, "/user")
-			user.Image = strings.Join(filenames, "")
+			user.PhotoProfile = strings.Join(filenames, "")
 		}
-		userUpdateById, err := c.userService.UpdateById(uuid, &user)
+		userUpdateById, err := c.userService.UpdateById(uuidParam, &user)
 		if err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, err)
 			return
@@ -227,17 +245,17 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 
 func (c *userController) DeleteUser(ctx *gin.Context) {
 	idParam := ctx.Param("id")
-	uuid := uuid.MustParse(idParam)
+	uuidParam := uuid.MustParse(idParam)
 	checkIdUser, err := utils.CheckIdUser(c.auth, c.redis, c.userService, ctx)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	if checkIdUser.UUID != uuid && checkIdUser.RoleId != 1 {
+	if checkIdUser.UUID != uuidParam && checkIdUser.RoleId != 1 {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
 		return
 	} else {
-		err := c.userService.DeleteById(uuid)
+		err := c.userService.DeleteById(uuidParam)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, err)
 			return

@@ -3,12 +3,9 @@ package utils
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"golang-youtube-api/model"
 	"golang-youtube-api/security"
 	"golang-youtube-api/service"
-	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -23,62 +20,6 @@ func After(value string, a string) string {
 		return ""
 	}
 	return value[adjustedPos:]
-}
-
-func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]string, error) {
-	// create folder and upload foto
-	var err error
-	var filenames []string
-	header := c.Request.Header
-	if header.Get("Content-Type")[:19] == "multipart/form-data" {
-		formUser, err := c.MultipartForm()
-		if err != nil {
-			return filenames, err
-		}
-		files := formUser.File["images"]
-		for _, file := range files {
-			if file.Size != 0 {
-				basename := filepath.Base(file.Filename)
-				regex := After(basename, ".")
-				lowerRegex := strings.ToLower(regex)
-				if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
-					dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
-					if dir != "" {
-						err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-						if err != nil {
-							_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-							_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-						}
-					}
-				}
-				filename := filepath.Join("./assets/images/", userId.String(), pathFolder, basename)
-				err = c.SaveUploadedFile(file, filename)
-				if err != nil {
-					return filenames, err
-				}
-				filenames = append(filenames, file.Filename)
-			} else {
-				dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
-				if dir != "" {
-					err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-					if err != nil {
-						_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-						_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-					}
-				}
-			}
-		}
-	} else {
-		dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
-		if dir != "" {
-			err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-			if err != nil {
-				_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-				_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-			}
-		}
-	}
-	return filenames, err
 }
 
 func UpdateUploadPhoto() {

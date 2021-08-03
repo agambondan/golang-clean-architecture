@@ -17,8 +17,9 @@ func NewPostService(repo repository.PostRepository) PostService {
 
 type PostService interface {
 	Create(post *model.Post) (*model.Post, error)
-	FindAll() ([]model.Post, error)
+	FindAll(limit, offset int) ([]model.Post, error)
 	FindById(id uint64) (model.Post, error)
+	FindByTitle(title string) (model.Post, error)
 	FindAllByUserId(uuid uuid.UUID) ([]model.Post, error)
 	FindAllByUsername(username string) ([]model.Post, error)
 	FindAllByCategoryId(id uint64) ([]model.Post, error)
@@ -30,12 +31,16 @@ func (p *postService) Create(post *model.Post) (*model.Post, error) {
 	return p.post.Save(post)
 }
 
-func (p *postService) FindAll() ([]model.Post, error) {
-	return p.post.FindAll()
+func (p *postService) FindAll(limit,offset int) ([]model.Post, error) {
+	return p.post.FindAll(limit,offset)
 }
 
 func (p *postService) FindById(id uint64) (model.Post, error) {
 	return p.post.FindById(id)
+}
+
+func (p *postService) FindByTitle(title string) (model.Post, error) {
+	return p.post.FindByTitle(title)
 }
 
 func (p *postService) FindAllByUserId(uuid uuid.UUID) ([]model.Post, error) {

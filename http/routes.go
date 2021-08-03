@@ -42,8 +42,8 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.POST("/refresh", middlewares.AuthMiddleware(), newLoginController.Refresh)
 
 	// Images API
-	//routes.GET("/images/:uuid/:folder", newImageController.GetImages)
-	//routes.GET("/images/:uuid/:folder/:id", newImageController.GetImages)
+	routes.GET("/images/:uuid", newImageController.GetImages)
+	routes.GET("/images/:uuid/:id", newImageController.GetImages)
 	routes.GET("/images/user/:id", newImageController.GetImagesByUserId)
 	routes.GET("/images/post/:id", newImageController.GetImagesByPostId)
 	//routes.GET("/camera", broadcast)
@@ -74,6 +74,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.POST("/post", newPostController.SavePost)
 	routes.GET("/posts", newPostController.GetPosts)
 	routes.GET("/post/:id", newPostController.GetPost)
+	routes.GET("/slug/post/:title", newPostController.GetPostByTitle)
 	routes.GET("/posts/uuid/:id", newPostController.GetPostsByUserId)
 	routes.GET("/posts/username/:username", newPostController.GetPostsByUsername)
 	routes.GET("/posts/category/:id", newPostController.GetPostsByCategoryId)

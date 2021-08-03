@@ -9,20 +9,24 @@ import (
 )
 
 type User struct {
-	UUID        uuid.UUID `sql:"primary_key" json:"id,omitempty"`
-	FirstName   string    `json:"first_name,omitempty"`
-	LastName    string    `json:"last_name,omitempty"`
-	Email       string    `json:"email,omitempty"`
-	PhoneNumber string    `json:"phone_number,omitempty"`
-	Username    string    `json:"username,omitempty"`
-	Password    string    `json:"password,omitempty"`
-	Image       string    `json:"image,omitempty"`
-	RoleId      uint64    `json:"role_id,omitempty"`
-	Posts       []Post    `json:"posts,omitempty"`
-	Role        *Role     `json:"role,omitempty"`
-	CreatedAt   time.Time `json:"created_at,string,omitempty"`
-	UpdatedAt   time.Time `json:"updated_at,string,omitempty"`
-	DeletedAt   time.Time `sql:"index" json:"deleted_at,string,omitempty"`
+	UUID         uuid.UUID `sql:"primary_key" json:"id,omitempty"`
+	FirstName    string    `json:"first_name,omitempty"`
+	LastName     string    `json:"last_name,omitempty"`
+	Email        string    `json:"email,omitempty"`
+	PhoneNumber  string    `json:"phone_number,omitempty"`
+	Username     string    `json:"username,omitempty"`
+	Password     string    `json:"password,omitempty"`
+	PhotoProfile string    `json:"image,omitempty"`
+	RoleId       uint64    `json:"role_id,omitempty"`
+	Instagram    string    `json:"instagram,omitempty"`
+	Facebook     string    `json:"facebook,omitempty"`
+	Twitter      string    `json:"twitter,omitempty"`
+	LinkedIn     string    `json:"linked_in,omitempty"`
+	Posts        []Post    `json:"posts,omitempty"`
+	Role         *Role     `json:"role,omitempty"`
+	CreatedAt    time.Time `json:"created_at,string,omitempty"`
+	UpdatedAt    time.Time `json:"updated_at,string,omitempty"`
+	DeletedAt    time.Time `sql:"index" json:"deleted_at,string,omitempty"`
 }
 
 type PublicUser struct {

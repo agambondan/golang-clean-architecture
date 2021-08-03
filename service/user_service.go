@@ -17,7 +17,7 @@ func NewUserService(repo repository.UserRepository) UserService {
 
 type UserService interface {
 	Create(user *model.User) (*model.User, error)
-	FindAll() ([]model.User, error)
+	FindAll(limit int) ([]model.User, error)
 	FindById(uuid uuid.UUID) (model.User, error)
 	FindAllByRoleId(id uint64) ([]model.User, error)
 	FindUserByEmailAndPassword(user *model.User) (model.User, error)
@@ -29,8 +29,8 @@ func (s *userService) Create(user *model.User) (*model.User, error) {
 	return s.user.Save(user)
 }
 
-func (s *userService) FindAll() ([]model.User, error) {
-	return s.user.FindAll()
+func (s *userService) FindAll(limit int) ([]model.User, error) {
+	return s.user.FindAll(limit)
 }
 
 func (s *userService) FindById(uuid uuid.UUID) (model.User, error) {

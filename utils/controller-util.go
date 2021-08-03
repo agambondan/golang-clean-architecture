@@ -2,10 +2,17 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"image"
+	"image/jpeg"
+	"image/png"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -13,13 +20,12 @@ func ToBase64(b []byte) string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func GetImage(uuid uuid.UUID, folderName, filename string) string {
+func GetImageToBase64(uuid uuid.UUID, folderName, filename string) string {
 	var fileImage string
 	filePath := fmt.Sprintf("/home/agam/IdeaProjects/golang-youtube-api/assets/images/%s/%s/%s", uuid.String(), folderName, filename)
 	split := strings.Split(filePath, ".")
 	imgFile, err := os.Open(filePath) // a QR code image
 	if err != nil {
-		fmt.Println(err)
 		return ""
 	}
 	defer imgFile.Close()
@@ -43,4 +49,94 @@ func GetImage(uuid uuid.UUID, folderName, filename string) string {
 		fileImage = imgBase64Str
 	}
 	return fileImage
+}
+
+func WriteImage(uuid uuid.UUID, folderName, filename string) *bytes.Buffer {
+	buffer := new(bytes.Buffer)
+	filePath := fmt.Sprintf("/home/agam/IdeaProjects/golang-youtube-api/assets/images/%s/%s/%s", uuid.String(), folderName, filename)
+	splitFileName := strings.Split(filePath, ".")
+	open, err := os.Open(filePath)
+	if err != nil {
+		log.Println(err)
+		return buffer
+	}
+	defer open.Close()
+	m, s, err := image.Decode(open)
+	if err != nil {
+		log.Println(s, err)
+		return buffer
+	}
+
+	switch strings.ToLower(splitFileName[1]) {
+	case "png":
+		if err := png.Encode(buffer, m); err != nil {
+			log.Println("unable to encode image.")
+			return buffer
+		}
+	case "jpeg", "jpg", "jpe":
+		if err := jpeg.Encode(buffer, m, nil); err != nil {
+			log.Println("unable to encode image.")
+			return buffer
+		}
+	default:
+	}
+	return buffer
+}
+
+func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]string, error) {
+	// create folder and upload foto
+	var err error
+	var filenames []string
+	header := c.Request.Header
+	if header.Get("Content-Type")[:19] == "multipart/form-data" {
+		formUser, err := c.MultipartForm()
+		if err != nil {
+			return filenames, err
+		}
+		files := formUser.File["images"]
+		for i, file := range files {
+			if i == 0 {
+				if file.Size != 0 {
+					basename := filepath.Base(file.Filename)
+					regex := After(basename, ".")
+					lowerRegex := strings.ToLower(regex)
+					if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
+						dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
+						if dir != "" {
+							err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+							if err != nil {
+								_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
+								_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+							}
+						}
+					}
+					filename := filepath.Join("./assets/images/", userId.String(), pathFolder, basename)
+					err = c.SaveUploadedFile(file, filename)
+					if err != nil {
+						return filenames, err
+					}
+					filenames = append(filenames, file.Filename)
+				} else {
+					dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
+					if dir != "" {
+						err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+						if err != nil {
+							_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
+							_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+						}
+					}
+				}
+			}
+		}
+	} else {
+		dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
+		if dir != "" {
+			err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+			if err != nil {
+				_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
+				_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+			}
+		}
+	}
+	return filenames, err
 }

@@ -12,7 +12,7 @@ type Post struct {
 	UserUUID    uuid.UUID `json:"user_id,omitempty"`
 	Title       string    `json:"title,omitempty"`
 	Description string    `json:"description,omitempty"`
-	PostImage   string    `json:"post_image,omitempty"`
+	Thumbnail   string    `json:"thumbnail,omitempty"`
 	Author      User      `json:"author,omitempty"`
 	Categories  []string  `json:"categories,omitempty"`
 	CreatedAt   time.Time `json:"created_at,string,omitempty"`
@@ -24,7 +24,7 @@ type PublicPost struct {
 	ID          uint64    `json:"id,omitempty"`
 	Title       string    `json:"title,omitempty"`
 	Description string    `json:"description,omitempty"`
-	PostImage   string    `json:"post_image,omitempty"`
+	Thumbnail   string    `json:"thumbnail,omitempty"`
 	Categories  []string  `json:"categories,omitempty"`
 	UserID      string    `json:"user_id,omitempty"`
 	FirstName   string    `json:"first_name,omitempty"`
@@ -49,7 +49,7 @@ func (p *Post) PublicPost() interface{} {
 		ID:          p.ID,
 		Title:       p.Title,
 		Description: p.Description,
-		PostImage:   p.PostImage,
+		Thumbnail:   p.Thumbnail,
 		Categories:  p.Categories,
 		FirstName:   p.Author.FirstName,
 		LastName:    p.Author.LastName,
@@ -61,7 +61,7 @@ func (p *Post) PublicPost() interface{} {
 func (p *Post) Prepare() {
 	p.Title = html.EscapeString(strings.TrimSpace(p.Title))
 	p.Description = html.EscapeString(strings.TrimSpace(p.Description))
-	p.PostImage = html.EscapeString(strings.TrimSpace(p.PostImage))
+	p.Thumbnail = html.EscapeString(strings.TrimSpace(p.Thumbnail))
 	p.CreatedAt = time.Now()
 	p.UpdatedAt = time.Now()
 }

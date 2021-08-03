@@ -26,6 +26,7 @@ type PostController interface {
 	SavePost(c *gin.Context)
 	GetPosts(c *gin.Context)
 	GetPost(c *gin.Context)
+	GetPostByTitle(c * gin.Context)
 	GetPostsByUserId(c *gin.Context)
 	GetPostsByUsername(c *gin.Context)
 	GetPostsByCategoryId(c *gin.Context)
@@ -79,7 +80,7 @@ func (p *postController) SavePost(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	post.PostImage = strings.Join(filenames, "")
+	post.Thumbnail = strings.Join(filenames, "")
 	for j := 0; j < len(categoryArray); j++ {
 		var postCategory = model.PostCategory{}
 		postCategory.CategoryID, _ = strconv.ParseUint(categoryArray[j], 10, 64)
@@ -94,7 +95,25 @@ func (p *postController) SavePost(ctx *gin.Context) {
 
 func (p *postController) GetPosts(ctx *gin.Context) {
 	posts := model.Posts{}
-	posts, err := p.postService.FindAll()
+	var limit, offset int
+	var err error
+	queryParamLimit := ctx.Query("_limit")
+	queryParamOffset := ctx.Query("_offset")
+	if queryParamLimit != "" {
+		limit, err = strconv.Atoi(queryParamLimit)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
+	if queryParamOffset != "" {
+		offset, err = strconv.Atoi(queryParamOffset)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
+	posts, err = p.postService.FindAll(limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 		return
@@ -104,10 +123,6 @@ func (p *postController) GetPosts(ctx *gin.Context) {
 
 func (p *postController) GetPost(ctx *gin.Context) {
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
-	//if err != nil {
-	//	ctx.JSON(http.StatusUnauthorized, err)
-	//	return
-	//}
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
@@ -115,6 +130,27 @@ func (p *postController) GetPost(ctx *gin.Context) {
 		return
 	}
 	post, err := p.postService.FindById(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	userFindById, err := p.userService.FindById(post.UserUUID)
+	if err != nil {
+		return
+	}
+	post.Author = userFindById
+	if checkIdUser.RoleId != 1 || post.UserUUID != checkIdUser.UUID {
+		ctx.JSON(http.StatusOK, post.PublicPost())
+		return
+	} else {
+		ctx.JSON(http.StatusOK, post)
+	}
+}
+
+func (p *postController) GetPostByTitle(ctx *gin.Context) {
+	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	title := ctx.Param("title")
+	post, err := p.postService.FindByTitle(title)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
@@ -233,7 +269,7 @@ func (p *postController) UpdatePost(ctx *gin.Context) {
 			return
 		}
 		postUpdate.CreatedAt = postFindById.CreatedAt
-		post.PostImage = strings.Join(filenames, "")
+		post.Thumbnail = strings.Join(filenames, "")
 		for j := 0; j < len(categoryArray); j++ {
 			var postCategory = model.PostCategory{}
 			postCategory.CategoryID, _ = strconv.ParseUint(categoryArray[j], 10, 64)
