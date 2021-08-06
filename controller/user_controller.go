@@ -24,6 +24,7 @@ type UserController interface {
 	SaveUser(c *gin.Context)
 	GetUsers(c *gin.Context)
 	GetUser(c *gin.Context)
+	GetUserByUsername(c *gin.Context)
 	GetUsersByRoleId(c *gin.Context)
 	UpdateUser(c *gin.Context)
 	DeleteUser(c *gin.Context)
@@ -92,7 +93,7 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		return
 	}
 	user.Prepare()
-	filenames, err := utils.CreateUploadPhoto(ctx, user.UUID, "/user")
+	filenames, err := utils.CreateUploadPhoto(ctx, user.UUID.String(), "/user")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
@@ -190,6 +191,28 @@ func (c *userController) GetUsersByRoleId(ctx *gin.Context) {
 	}
 }
 
+func (c *userController) GetUserByUsername(ctx *gin.Context) {
+	username := ctx.Param("username")
+	findUserByUsername, err := c.userService.FindByUsername(username)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	} else {
+		if userCheck.Role.Name == "admin" {
+			ctx.JSON(http.StatusOK, findUserByUsername)
+			return
+		} else {
+			ctx.JSON(http.StatusOK, findUserByUsername.PublicUser())
+			return
+		}
+	}
+}
+
 func (c *userController) UpdateUser(ctx *gin.Context) {
 	var filenames []string
 	var user model.User
@@ -230,7 +253,7 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 		}
 		user.UUID = checkIdUser.UUID
 		if contentType != "application/json" {
-			filenames, err = utils.CreateUploadPhoto(ctx, user.UUID, "/user")
+			filenames, err = utils.CreateUploadPhoto(ctx, user.UUID.String(), "/user")
 			user.PhotoProfile = strings.Join(filenames, "")
 		}
 		userUpdateById, err := c.userService.UpdateById(uuidParam, &user)

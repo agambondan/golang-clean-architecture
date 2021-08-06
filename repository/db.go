@@ -58,7 +58,7 @@ func (s *Repositories) Seeder() error {
 	result, err = s.db.Exec("CREATE TABLE IF NOT EXISTS posts (id serial PRIMARY KEY, title VARCHAR(100) not null unique, description text not null, thumbnail VARCHAR(255), user_uuid uuid not null, " +
 		"created_at timestamp, updated_at timestamp, deleted_at timestamp)")
 	// log.Println(result, err)
-	result, err = s.db.Exec("CREATE TABLE IF NOT EXISTS categories (id serial PRIMARY KEY, name VARCHAR(35) not null unique, " +
+	result, err = s.db.Exec("CREATE TABLE IF NOT EXISTS categories (id serial PRIMARY KEY, name VARCHAR(35) not null unique, thumbnail varchar(255) not null " +
 		"created_at timestamp, updated_at timestamp, deleted_at timestamp)")
 	// log.Println(result, err)
 	result, err = s.db.Exec("CREATE TABLE IF NOT EXISTS post_categories " +

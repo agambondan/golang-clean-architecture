@@ -18,6 +18,7 @@ type CategoryService interface {
 	Create(category *model.Category) (*model.Category, error)
 	FindAll() ([]model.Category, error)
 	FindById(id uint64) (model.Category, error)
+	FindByName(name string) (model.Category, error)
 	UpdateById(id uint64, category *model.Category) (*model.Category, error)
 	DeleteById(id uint64) error
 }
@@ -32,6 +33,10 @@ func (p *categoryService) FindAll() ([]model.Category, error) {
 
 func (p *categoryService) FindById(id uint64) (model.Category, error) {
 	return p.category.FindById(id)
+}
+
+func (p *categoryService) FindByName(name string) (model.Category, error) {
+	return p.category.FindByName(name)
 }
 
 func (p *categoryService) UpdateById(id uint64, category *model.Category) (*model.Category, error) {

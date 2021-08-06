@@ -51,9 +51,14 @@ func GetImageToBase64(uuid uuid.UUID, folderName, filename string) string {
 	return fileImage
 }
 
-func WriteImage(uuid uuid.UUID, folderName, filename string) *bytes.Buffer {
+func WriteImage(userId string, folderName, filename string) *bytes.Buffer {
 	buffer := new(bytes.Buffer)
-	filePath := fmt.Sprintf("/home/agam/IdeaProjects/golang-youtube-api/assets/images/%s/%s/%s", uuid.String(), folderName, filename)
+	var filePath string
+	if userId != "" {
+		filePath = fmt.Sprintf("/home/agam/IdeaProjects/golang-youtube-api/assets/images/%s/%s/%s", userId, folderName, filename)
+	} else {
+		filePath = fmt.Sprintf("/home/agam/IdeaProjects/golang-youtube-api/assets/images/%s/%s", folderName, filename)
+	}
 	splitFileName := strings.Split(filePath, ".")
 	open, err := os.Open(filePath)
 	if err != nil {
@@ -66,7 +71,6 @@ func WriteImage(uuid uuid.UUID, folderName, filename string) *bytes.Buffer {
 		log.Println(s, err)
 		return buffer
 	}
-
 	switch strings.ToLower(splitFileName[1]) {
 	case "png":
 		if err := png.Encode(buffer, m); err != nil {
@@ -83,12 +87,12 @@ func WriteImage(uuid uuid.UUID, folderName, filename string) *bytes.Buffer {
 	return buffer
 }
 
-func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]string, error) {
+func CreateUploadPhoto(c *gin.Context, userId string, pathFolder string) ([]string, error) {
 	// create folder and upload foto
 	var err error
 	var filenames []string
 	header := c.Request.Header
-	if header.Get("Content-Type")[:19] == "multipart/form-data" {
+	if header.Get("Content-Type")[:19] == "multipart/form-data" && userId != "" {
 		formUser, err := c.MultipartForm()
 		if err != nil {
 			return filenames, err
@@ -101,42 +105,79 @@ func CreateUploadPhoto(c *gin.Context, userId uuid.UUID, pathFolder string) ([]s
 					regex := After(basename, ".")
 					lowerRegex := strings.ToLower(regex)
 					if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
-						dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
+						dir := filepath.Join("./assets/images/", userId, pathFolder)
 						if dir != "" {
-							err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+							err = os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
 							if err != nil {
-								_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-								_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+								_ = os.Mkdir("./assets/images/"+userId, os.ModePerm)
+								_ = os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
 							}
 						}
 					}
-					filename := filepath.Join("./assets/images/", userId.String(), pathFolder, basename)
+					filename := filepath.Join("./assets/images/", userId, pathFolder, basename)
 					err = c.SaveUploadedFile(file, filename)
 					if err != nil {
 						return filenames, err
 					}
 					filenames = append(filenames, file.Filename)
 				} else {
-					dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
+					dir := filepath.Join("./assets/images/", userId, pathFolder)
 					if dir != "" {
-						err = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+						err = os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
 						if err != nil {
-							_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-							_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+							_ = os.Mkdir("./assets/images/"+userId, os.ModePerm)
+							_ = os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
 						}
 					}
 				}
 			}
 		}
 	} else {
-		dir := filepath.Join("./assets/images/", userId.String(), pathFolder)
-		if dir != "" {
-			err := os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
-			if err != nil {
-				_ = os.Mkdir("./assets/images/"+userId.String(), os.ModePerm)
-				_ = os.Mkdir("./assets/images/"+userId.String()+pathFolder, os.ModePerm)
+		formUser, err := c.MultipartForm()
+		if err != nil {
+			return filenames, err
+		}
+		files := formUser.File["images"]
+		for i, file := range files {
+			if i == 0 {
+				if file.Size != 0 {
+					basename := filepath.Base(file.Filename)
+					regex := After(basename, ".")
+					lowerRegex := strings.ToLower(regex)
+					if lowerRegex[:2] == "pn" || lowerRegex[:2] == "jp" {
+						dir := filepath.Join("./assets/images/", pathFolder)
+						if dir != "" {
+							err = os.Mkdir("./assets/images/"+pathFolder, os.ModePerm)
+							if err != nil {
+								_ = os.Mkdir("./assets/images/"+pathFolder, os.ModePerm)
+							}
+						}
+					}
+					filename := filepath.Join("./assets/images/", pathFolder, basename)
+					err = c.SaveUploadedFile(file, filename)
+					if err != nil {
+						return filenames, err
+					}
+					filenames = append(filenames, file.Filename)
+				} else {
+					dir := filepath.Join("./assets/images/", pathFolder)
+					if dir != "" {
+						_ = os.Mkdir("./assets/images/"+pathFolder, os.ModePerm)
+					}
+				}
 			}
 		}
 	}
+
+	//} else {
+	//	dir := filepath.Join("./assets/images/", userId, pathFolder)
+	//	if dir != "" {
+	//		err := os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
+	//		if err != nil {
+	//			_ = os.Mkdir("./assets/images/"+userId, os.ModePerm)
+	//			_ = os.Mkdir("./assets/images/"+userId+pathFolder, os.ModePerm)
+	//		}
+	//	}
+	//}
 	return filenames, err
 }

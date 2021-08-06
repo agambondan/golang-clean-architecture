@@ -16,37 +16,39 @@ import (
 )
 
 type imageController struct {
-	userService service.UserService
-	postService service.PostService
-	redis       security.Interface
-	auth        security.TokenInterface
+	userService     service.UserService
+	postService     service.PostService
+	categoryService service.CategoryService
+	redis           security.Interface
+	auth            security.TokenInterface
 }
 
 type ImageController interface {
-	GetImagesByUserId(c *gin.Context)
-	GetImagesByPostId(c *gin.Context)
+	GetImagesByUsername(c *gin.Context)
+	GetImagesByPostTitle(c *gin.Context)
+	GetImagesByCategoryName(c *gin.Context)
 	GetImages(c *gin.Context)
 }
 
 func NewImageController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) ImageController {
 	newUserService := service.NewUserService(repo.User)
 	newPostService := service.NewPostService(repo.Post)
-	return &imageController{newUserService, newPostService, redis, auth}
+	newCategoryService := service.NewCategoryService(repo.Category)
+	return &imageController{newUserService, newPostService, newCategoryService, redis, auth}
 }
 
-func (i *imageController) GetImagesByUserId(ctx *gin.Context) {
+func (i *imageController) GetImagesByUsername(ctx *gin.Context) {
 	var err error
 	var filenames []string
-	idParam := ctx.Param("id")
-	userId := uuid.MustParse(idParam)
-	userFindById, err := i.userService.FindById(userId)
+	username := ctx.Param("username")
+	userFindById, err := i.userService.FindByUsername(username)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	filenames = strings.Split(userFindById.PhotoProfile, ", ")
 	for i := 0; i < len(filenames); i++ {
-		buffer := utils.WriteImage(userFindById.UUID, "user", filenames[i])
+		buffer := utils.WriteImage(userFindById.UUID.String(), "user", filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
 		ctx.Writer.Header().Set("Vary", "Origin")
 		ctx.Writer.Header().Set("X-Content-Type-Options", "nosniff")
@@ -62,23 +64,45 @@ func (i *imageController) GetImagesByUserId(ctx *gin.Context) {
 	}
 }
 
-func (i *imageController) GetImagesByPostId(ctx *gin.Context) {
+func (i *imageController) GetImagesByPostTitle(ctx *gin.Context) {
 	var err error
 	var filenames []string
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
-	postFindById, err := i.postService.FindById(uint64(id))
+	title := ctx.Param("title")
+	postFindById, err := i.postService.FindByTitle(title)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	filenames = strings.Split(postFindById.Thumbnail, ", ")
 	for i := 0; i < len(filenames); i++ {
-		buffer := utils.WriteImage(postFindById.UserUUID, "post", filenames[i])
+		buffer := utils.WriteImage(postFindById.UserUUID.String(), "post", filenames[i])
+		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
+		ctx.Writer.Header().Set("Vary", "Origin")
+		ctx.Writer.Header().Set("X-Content-Type-Options", "nosniff")
+		ctx.Writer.Header().Set("Referrer-Policy", "same-origin")
+		ctx.Writer.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename:%s", filenames[i]))
+		ctx.Writer.Header().Set("Content-Type", "image/jpeg")
+		ctx.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+		if _, err := ctx.Writer.Write(buffer.Bytes()); err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"message": "unable to write image."})
+			log.Println("unable to write image.")
+			return
+		}
+	}
+}
+
+func (i *imageController) GetImagesByCategoryName(ctx *gin.Context) {
+	var err error
+	var filenames []string
+	name := ctx.Param("name")
+	categoryFindByName, err := i.categoryService.FindByName(name)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	filenames = strings.Split(categoryFindByName.Thumbnail, ", ")
+	for i := 0; i < len(filenames); i++ {
+		buffer := utils.WriteImage("", "categories", filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
 		ctx.Writer.Header().Set("Vary", "Origin")
 		ctx.Writer.Header().Set("X-Content-Type-Options", "nosniff")
@@ -104,7 +128,7 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 	uuidParam := ctx.Param("uuid")
 	userId := uuid.MustParse(uuidParam)
 	if idParam != "" {
-		folderName= "post"
+		folderName = "post"
 		id, err = strconv.Atoi(idParam)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, err)
@@ -131,7 +155,7 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 		return
 	}
 	for i := 0; i < len(filenames); i++ {
-		buffer := utils.WriteImage(userId, folderName, filenames[i])
+		buffer := utils.WriteImage(userId.String(), folderName, filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
 		ctx.Writer.Header().Set("Vary", "Origin")
 		ctx.Writer.Header().Set("X-Content-Type-Options", "nosniff")

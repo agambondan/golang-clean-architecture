@@ -29,7 +29,7 @@ type PostController interface {
 	GetPostByTitle(c * gin.Context)
 	GetPostsByUserId(c *gin.Context)
 	GetPostsByUsername(c *gin.Context)
-	GetPostsByCategoryId(c *gin.Context)
+	GetPostsByCategoryName(c *gin.Context)
 	UpdatePost(c *gin.Context)
 	DeletePost(c *gin.Context)
 }
@@ -70,17 +70,17 @@ func (p *postController) SavePost(ctx *gin.Context) {
 		return
 	}
 	post.Author = checkIdUser
-	postCreate, err := p.postService.Create(&post)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
-	filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID, "/post")
+	filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID.String(), "/post")
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
 	post.Thumbnail = strings.Join(filenames, "")
+	postCreate, err := p.postService.Create(&post)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
 	for j := 0; j < len(categoryArray); j++ {
 		var postCategory = model.PostCategory{}
 		postCategory.CategoryID, _ = strconv.ParseUint(categoryArray[j], 10, 64)
@@ -198,15 +198,10 @@ func (p *postController) GetPostsByUsername(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, posts.PublicPosts())
 }
 
-func (p *postController) GetPostsByCategoryId(ctx *gin.Context) {
+func (p *postController) GetPostsByCategoryName(ctx *gin.Context) {
 	posts := model.Posts{}
-	idParam := ctx.Param("id")
-	id, err := strconv.Atoi(idParam)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
-		return
-	}
-	posts, err = p.postService.FindAllByCategoryId(uint64(id))
+	name := ctx.Param("name")
+	posts, err := p.postService.FindAllByCategoryName(name)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 		return
@@ -263,7 +258,7 @@ func (p *postController) UpdatePost(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, err)
 			return
 		}
-		filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID, "/post")
+		filenames, err := utils.CreateUploadPhoto(ctx, post.UserUUID.String(), "/post")
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 			return

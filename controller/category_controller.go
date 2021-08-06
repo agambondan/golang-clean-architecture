@@ -9,6 +9,7 @@ import (
 	"golang-youtube-api/utils"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type categoryController struct {
@@ -23,6 +24,7 @@ type CategoryController interface {
 	SaveCategory(c *gin.Context)
 	GetCategories(c *gin.Context)
 	GetCategory(c *gin.Context)
+	GetCategoryByName(c *gin.Context)
 	UpdateCategory(c *gin.Context)
 	DeleteCategory(c *gin.Context)
 }
@@ -41,16 +43,25 @@ func (c *categoryController) SaveCategory(ctx *gin.Context) {
 		return
 	} else {
 		var category model.Category
-		if err := ctx.ShouldBindJSON(&category); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid json"})
-			return
-		}
 		category.Prepare()
-		validate := category.Validate("")
-		if len(validate) != 0 {
-			ctx.JSON(http.StatusBadRequest, validate)
+		name := ctx.PostForm("name")
+		if name != "" {
+			category.Name = name
+		} else {
+			if err = ctx.ShouldBindJSON(&category); err != nil {
+				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
+					"error": "invalid json",
+				})
+				return
+			}
+		}
+		category.Validate("")
+		filenames, err := utils.CreateUploadPhoto(ctx, "", "categories")
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 			return
 		}
+		category.Thumbnail = strings.Join(filenames, "")
 		createCategory, err := c.categoryService.Create(&category)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -82,6 +93,17 @@ func (c *categoryController) GetCategory(ctx *gin.Context) {
 		return
 	}
 	categoryFindById, err := c.categoryService.FindById(uint64(id))
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, categoryFindById)
+	return
+}
+
+func (c *categoryController) GetCategoryByName(ctx *gin.Context) {
+	name := ctx.Param("name")
+	categoryFindById, err := c.categoryService.FindByName(name)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

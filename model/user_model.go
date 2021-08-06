@@ -33,6 +33,10 @@ type PublicUser struct {
 	FirstName string `json:"first_name,omitempty"`
 	LastName  string `json:"last_name,omitempty"`
 	Username  string `json:"username,omitempty"`
+	Instagram string `json:"instagram,omitempty"`
+	Facebook  string `json:"facebook,omitempty"`
+	Twitter   string `json:"twitter,omitempty"`
+	LinkedIn  string `json:"linked_in,omitempty"`
 }
 
 type Users []User
@@ -52,6 +56,10 @@ func (u *User) PublicUser() interface{} {
 		FirstName: u.FirstName,
 		LastName:  u.LastName,
 		Username:  u.Username,
+		Instagram: u.Instagram,
+		Facebook:  u.Facebook,
+		Twitter:   u.Twitter,
+		LinkedIn:  u.LinkedIn,
 	}
 }
 

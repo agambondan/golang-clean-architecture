@@ -26,9 +26,13 @@ type PublicPost struct {
 	Description string    `json:"description,omitempty"`
 	Thumbnail   string    `json:"thumbnail,omitempty"`
 	Categories  []string  `json:"categories,omitempty"`
-	UserID      string    `json:"user_id,omitempty"`
 	FirstName   string    `json:"first_name,omitempty"`
 	LastName    string    `json:"last_name,omitempty"`
+	Username    string    `json:"username,omitempty"`
+	Instagram   string    `json:"instagram,omitempty"`
+	Facebook    string    `json:"facebook,omitempty"`
+	Twitter     string    `json:"twitter,omitempty"`
+	LinkedIn    string    `json:"linked_in,omitempty"`
 	CreatedAt   time.Time `json:"created_at,omitempty"`
 	UpdatedAt   time.Time `json:"updated_at,omitempty"`
 }
@@ -53,6 +57,11 @@ func (p *Post) PublicPost() interface{} {
 		Categories:  p.Categories,
 		FirstName:   p.Author.FirstName,
 		LastName:    p.Author.LastName,
+		Username:    p.Author.Username,
+		Instagram:   p.Author.Instagram,
+		Facebook:    p.Author.Facebook,
+		Twitter:     p.Author.Twitter,
+		LinkedIn:    p.Author.LinkedIn,
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}

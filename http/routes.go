@@ -44,8 +44,9 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	// Images API
 	routes.GET("/images/:uuid", newImageController.GetImages)
 	routes.GET("/images/:uuid/:id", newImageController.GetImages)
-	routes.GET("/images/user/:id", newImageController.GetImagesByUserId)
-	routes.GET("/images/post/:id", newImageController.GetImagesByPostId)
+	routes.GET("/images/user/:username", newImageController.GetImagesByUsername)
+	routes.GET("/images/post/:title", newImageController.GetImagesByPostTitle)
+	routes.GET("/images/category/:name", newImageController.GetImagesByCategoryName)
 	//routes.GET("/camera", broadcast)
 
 	// Role API
@@ -74,12 +75,16 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.POST("/post", newPostController.SavePost)
 	routes.GET("/posts", newPostController.GetPosts)
 	routes.GET("/post/:id", newPostController.GetPost)
-	routes.GET("/slug/post/:title", newPostController.GetPostByTitle)
 	routes.GET("/posts/uuid/:id", newPostController.GetPostsByUserId)
 	routes.GET("/posts/username/:username", newPostController.GetPostsByUsername)
-	routes.GET("/posts/category/:id", newPostController.GetPostsByCategoryId)
+	routes.GET("/posts/category/:id", newPostController.GetPostsByCategoryName)
 	routes.PUT("/post/:id", newPostController.UpdatePost)
 	routes.DELETE("/post/:id", newPostController.DeletePost)
+
+	// Slug API
+	routes.GET("/slug/user/:username", newUserController.GetUserByUsername)
+	routes.GET("/slug/category/:name", newCategoryController.GetCategoryByName)
+	routes.GET("/slug/post/:title", newPostController.GetPostByTitle)
 }
 
 func Home(ctx *gin.Context) {

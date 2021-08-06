@@ -9,6 +9,7 @@ import (
 type Category struct {
 	ID        uint64    `sql:"primary_key" json:"id,omitempty"`
 	Name      string    `json:"name,omitempty"`
+	Thumbnail string    `json:"thumbnail,omitempty"`
 	Posts     []Post    `json:"categories,omitempty"`
 	CreatedAt time.Time `json:"created_at,string,omitempty"`
 	UpdatedAt time.Time `json:"updated_at,string,omitempty"`
@@ -30,6 +31,7 @@ func (c *Category) Category() interface{} {
 	return &Category{
 		ID:        c.ID,
 		Name:      c.Name,
+		Thumbnail: c.Thumbnail,
 		CreatedAt: c.CreatedAt,
 		UpdatedAt: c.UpdatedAt,
 	}
@@ -37,6 +39,7 @@ func (c *Category) Category() interface{} {
 
 func (c *Category) Prepare() {
 	c.Name = html.EscapeString(strings.TrimSpace(c.Name))
+	c.Thumbnail = html.EscapeString(strings.TrimSpace(c.Thumbnail))
 	c.CreatedAt = time.Now()
 	c.UpdatedAt = time.Now()
 }

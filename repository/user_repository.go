@@ -11,6 +11,7 @@ type UserRepository interface {
 	Save(user *model.User) (*model.User, error)
 	FindAll(limit int) ([]model.User, error)
 	FindById(uuid uuid.UUID) (model.User, error)
+	FindByUsername(username string) (model.User, error)
 	FindAllByRoleId(id uint64) ([]model.User, error)
 	FindUserByEmailAndPassword(user *model.User) (model.User, error)
 	UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error)
@@ -64,14 +65,30 @@ func (r *userRepo) FindAll(limit int) ([]model.User, error) {
 
 func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
 	var user model.User
-	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile," +
-		" role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE uuid=$1 AND deleted_at IS NULL")
+	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile, " +
+		"role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE uuid=$1 AND deleted_at IS NULL")
 	prepare, err := r.db.Prepare(querySelect)
 	if err != nil {
 		return user, err
 	}
 	err = prepare.QueryRow(uuid).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile,
-		&user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.RoleId, &user.CreatedAt, &user.UpdatedAt)
+		&user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		return user, err
+	}
+	return user, nil
+}
+
+func (r *userRepo) FindByUsername(username string) (model.User, error) {
+	var user model.User
+	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile, " +
+		"role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE username=$1 AND deleted_at IS NULL")
+	prepare, err := r.db.Prepare(querySelect)
+	if err != nil {
+		return user, err
+	}
+	err = prepare.QueryRow(&username).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile,
+		&user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
 	}
