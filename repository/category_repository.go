@@ -8,7 +8,7 @@ import (
 
 type CategoryRepository interface {
 	Save(category *model.Category) (*model.Category, error)
-	FindAll() ([]model.Category, error)
+	FindAll(limit, offset int) ([]model.Category, error)
 	FindById(id uint64) (model.Category, error)
 	FindByName(name string) (model.Category, error)
 	UpdateById(id uint64, category *model.Category) (*model.Category, error)
@@ -37,10 +37,11 @@ func (r *categoryRepo) Save(category *model.Category) (*model.Category, error) {
 	return category, err
 }
 
-func (r *categoryRepo) FindAll() ([]model.Category, error) {
+func (r *categoryRepo) FindAll(limit, offset int) ([]model.Category, error) {
 	var categories []model.Category
 	var category model.Category
-	query := fmt.Sprintf("select id, name, thumbnail, created_at, updated_at from categories where deleted_at is null")
+	query := fmt.Sprintf("select id, name, thumbnail, created_at, updated_at from categories where deleted_at is null " +
+		"order by id limit %d offset %d ;", limit, offset)
 	stmt, err := r.db.Prepare(query)
 	if err != nil {
 		return categories, err

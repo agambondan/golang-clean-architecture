@@ -72,8 +72,28 @@ func (c *categoryController) SaveCategory(ctx *gin.Context) {
 }
 
 func (c *categoryController) GetCategories(ctx *gin.Context) {
-	categories := model.Categories{}
-	categories, err := c.categoryService.FindAll()
+	var limit, offset int
+	var err error
+	var categories model.Categories
+	queryParamLimit := ctx.Query("_limit")
+	queryParamOffset := ctx.Query("_offset")
+	if queryParamLimit != "" {
+		limit, err = strconv.Atoi(queryParamLimit)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	} else {
+		limit = 12
+	}
+	if queryParamOffset != "" {
+		offset, err = strconv.Atoi(queryParamOffset)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
+	categories, err = c.categoryService.FindAll(limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 		return

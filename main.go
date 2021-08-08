@@ -10,7 +10,7 @@ import (
 var (
 	server      http.Server
 	configure   config.Configuration
-	pathFileEnv = "/home/agam/IdeaProjects/golang-youtube-api/.env"
+	pathFileEnv = "/home/agam/IdeaProjects/golang-youtube-api/.env.heroku"
 )
 
 func init() {

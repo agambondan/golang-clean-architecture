@@ -9,7 +9,7 @@ import (
 
 type UserRepository interface {
 	Save(user *model.User) (*model.User, error)
-	FindAll(limit int) ([]model.User, error)
+	FindAll(limit, offset int) ([]model.User, error)
 	FindById(uuid uuid.UUID) (model.User, error)
 	FindByUsername(username string) (model.User, error)
 	FindAllByRoleId(id uint64) ([]model.User, error)
@@ -42,10 +42,11 @@ func (r *userRepo) Save(user *model.User) (*model.User, error) {
 	return user, err
 }
 
-func (r *userRepo) FindAll(limit int) ([]model.User, error) {
+func (r *userRepo) FindAll(limit, offset int) ([]model.User, error) {
 	var users []model.User
-	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password," +
-		" photo_profile, role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE deleted_at IS NULL")
+	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password, "+
+		"photo_profile, role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE deleted_at IS NULL "+
+		"limit %d offset %d ;", limit, offset)
 	rows, err := r.db.Query(queryGetUsers)
 	if err != nil {
 		return users, err

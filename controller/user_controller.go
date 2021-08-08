@@ -109,9 +109,10 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 
 func (c *userController) GetUsers(ctx *gin.Context) {
 	var users model.Users
-	var limit int
+	var limit, offset int
 	var err error
 	queryParamLimit := ctx.Query("_limit")
+	queryParamOffset := ctx.Query("_offset")
 	if queryParamLimit != "" {
 		limit, err = strconv.Atoi(queryParamLimit)
 		if err != nil {
@@ -119,7 +120,14 @@ func (c *userController) GetUsers(ctx *gin.Context) {
 			return
 		}
 	}
-	users, err = c.userService.FindAll(limit)
+	if queryParamOffset != "" {
+		offset, err = strconv.Atoi(queryParamOffset)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
+	users, err = c.userService.FindAll(limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return

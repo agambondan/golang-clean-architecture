@@ -18,8 +18,9 @@ type Repositories struct {
 }
 
 func NewRepositories(configure config.Configuration) (*Repositories, error) {
-	DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=disable password=%s",
-		configure.DBHost, configure.DBPort, configure.DBUser, configure.DBName, configure.DBPassword)
+	//DBURL := fmt.Sprintf("host=%s port=%s user=%s dbname=%s sslmode=require password=%s",
+	//	configure.DBHost, configure.DBPort, configure.DBUser, configure.DBName, configure.DBPassword)
+	DBURL := fmt.Sprint("postgres://cgxtqgoobyvbwk:47465f1dd068148279716e2788dc252a6bb85339d5b2d635d2b4557b5c7e2627@ec2-34-204-128-77.compute-1.amazonaws.com:5432/d594pchn88flmk")
 	db, _ := sql.Open(configure.DBDriver, DBURL)
 	err := db.Ping()
 	if err != nil {

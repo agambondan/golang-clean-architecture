@@ -26,7 +26,7 @@ type PostController interface {
 	SavePost(c *gin.Context)
 	GetPosts(c *gin.Context)
 	GetPost(c *gin.Context)
-	GetPostByTitle(c * gin.Context)
+	GetPostByTitle(c *gin.Context)
 	GetPostsByUserId(c *gin.Context)
 	GetPostsByUsername(c *gin.Context)
 	GetPostsByCategoryName(c *gin.Context)
@@ -105,6 +105,8 @@ func (p *postController) GetPosts(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 			return
 		}
+	} else {
+		limit = 4
 	}
 	if queryParamOffset != "" {
 		offset, err = strconv.Atoi(queryParamOffset)
@@ -200,8 +202,28 @@ func (p *postController) GetPostsByUsername(ctx *gin.Context) {
 
 func (p *postController) GetPostsByCategoryName(ctx *gin.Context) {
 	posts := model.Posts{}
+	var limit, offset int
+	var err error
+	queryParamLimit := ctx.Query("_limit")
+	queryParamOffset := ctx.Query("_offset")
+	if queryParamLimit != "" {
+		limit, err = strconv.Atoi(queryParamLimit)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	} else {
+		limit = 4
+	}
+	if queryParamOffset != "" {
+		offset, err = strconv.Atoi(queryParamOffset)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			return
+		}
+	}
 	name := ctx.Param("name")
-	posts, err := p.postService.FindAllByCategoryName(name)
+	posts, err = p.postService.FindAllByCategoryName(name, limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
 		return

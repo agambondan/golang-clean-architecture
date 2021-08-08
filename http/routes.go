@@ -77,7 +77,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/post/:id", newPostController.GetPost)
 	routes.GET("/posts/uuid/:id", newPostController.GetPostsByUserId)
 	routes.GET("/posts/username/:username", newPostController.GetPostsByUsername)
-	routes.GET("/posts/category/:id", newPostController.GetPostsByCategoryName)
+	routes.GET("/posts/category/:name", newPostController.GetPostsByCategoryName)
 	routes.PUT("/post/:id", newPostController.UpdatePost)
 	routes.DELETE("/post/:id", newPostController.DeletePost)
 
