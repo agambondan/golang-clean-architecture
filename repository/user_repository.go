@@ -27,15 +27,15 @@ func NewUserRepository(db *sql.DB) UserRepository {
 }
 
 func (r *userRepo) Save(user *model.User) (*model.User, error) {
-	queryInsert := fmt.Sprintf("INSERT INTO %s (uuid, first_name, last_name, email, phone_number, username, password, photo_profile, role_id, "+
+	queryInsert := fmt.Sprintf("INSERT INTO %s (uuid, first_name, last_name, email, phone_number, username, password, image, image_url, thumbnail_url, role_id, "+
 		"instagram, facebook, twitter, linkedin, created_at, updated_at, deleted_at) "+
-		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)", "users")
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)", "users")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return user, err
 	}
-	_, err = stmt.Exec(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile, &user.RoleId,
-		&user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt, nil)
+	_, err = stmt.Exec(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL,
+		&user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt, nil)
 	if err != nil {
 		return user, err
 	}
@@ -45,7 +45,7 @@ func (r *userRepo) Save(user *model.User) (*model.User, error) {
 func (r *userRepo) FindAll(limit, offset int) ([]model.User, error) {
 	var users []model.User
 	queryGetUsers := fmt.Sprintf("SELECT uuid, first_name, last_name, email, phone_number, username, password, "+
-		"photo_profile, role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE deleted_at IS NULL "+
+		"image, image_url, thumbnail_url, role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE deleted_at IS NULL "+
 		"limit %d offset %d ;", limit, offset)
 	rows, err := r.db.Query(queryGetUsers)
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *userRepo) FindAll(limit, offset int) ([]model.User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user model.User
-		err = rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile, &user.RoleId,
+		err = rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL, &user.RoleId,
 			&user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return users, err
@@ -66,13 +66,13 @@ func (r *userRepo) FindAll(limit, offset int) ([]model.User, error) {
 
 func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
 	var user model.User
-	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile, " +
+	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, image, image_url, thumbnail_url, " +
 		"role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE uuid=$1 AND deleted_at IS NULL")
 	prepare, err := r.db.Prepare(querySelect)
 	if err != nil {
 		return user, err
 	}
-	err = prepare.QueryRow(uuid).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile,
+	err = prepare.QueryRow(uuid).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL,
 		&user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
@@ -82,13 +82,13 @@ func (r *userRepo) FindById(uuid uuid.UUID) (model.User, error) {
 
 func (r *userRepo) FindByUsername(username string) (model.User, error) {
 	var user model.User
-	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile, " +
+	querySelect := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, image, image_url, thumbnail_url, " +
 		"role_id, instagram, facebook, twitter, linkedin, created_at, updated_at FROM users WHERE username=$1 AND deleted_at IS NULL")
 	prepare, err := r.db.Prepare(querySelect)
 	if err != nil {
 		return user, err
 	}
-	err = prepare.QueryRow(&username).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile,
+	err = prepare.QueryRow(&username).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL,
 		&user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
@@ -98,7 +98,7 @@ func (r *userRepo) FindByUsername(username string) (model.User, error) {
 
 func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 	var users []model.User
-	query := fmt.Sprintf("select u.uuid, u.first_name, u.last_name, u.email, u.phone_number, u.username, u.photo_profile, u.password, u.role_id, "+
+	query := fmt.Sprintf("select u.uuid, u.first_name, u.last_name, u.email, u.phone_number, u.username, u.image, image_url, thumbnail_url, u.password, u.role_id, "+
 		"u.instagram, u.facebook, u.twitter, u.linkedin, u.created_at, u.updated_at from users u inner join roles r on r.id = u.role_id where r.id = %d and u.deleted_at is null", id)
 	rows, err := r.db.Query(query)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var user model.User
-		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile, &user.RoleId,
+		err := rows.Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL, &user.RoleId,
 			&user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return users, err
@@ -119,10 +119,10 @@ func (r *userRepo) FindAllByRoleId(id uint64) ([]model.User, error) {
 
 func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error) {
 	var user model.User
-	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, photo_profile, role_id, instagram, facebook, twitter, linkedin, " +
+	queryLogin := fmt.Sprint("SELECT uuid, first_name, last_name, email, phone_number, username, password, image, image_url, thumbnail_url, role_id, instagram, facebook, twitter, linkedin, " +
 		"created_at, updated_at FROM users WHERE (email=$1 OR username=$2) AND password=$3 AND deleted_at IS NULL")
 	err := r.db.QueryRow(queryLogin, u.Email, u.Username, u.Password).Scan(&user.UUID, &user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username,
-		&user.Password, &user.PhotoProfile, &user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
+		&user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL, &user.RoleId, &user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		return user, err
 	}
@@ -130,13 +130,14 @@ func (r *userRepo) FindUserByEmailAndPassword(u *model.User) (model.User, error)
 }
 
 func (r *userRepo) UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error) {
-	queryInsert := fmt.Sprint("UPDATE users SET first_name = $1, last_name = $2, email = $3, phone_number = $4," +
-		"username = $5, password = $6, image = $7, role_id = $8, updated_at = $9 where uuid = $10")
+	queryInsert := fmt.Sprint("UPDATE users SET first_name = $1, last_name = $2, email = $3, phone_number = $4, " +
+		"username = $5, password = $6, image = $7, image_url = $8, thumbnail_url = $9, role_id = $10, instagram = $11, facebook = $12, " +
+		"twitter = $13,  linked_in = $14, updated_at = $15 where uuid = $16")
 	stmt, err := r.db.Prepare(queryInsert)
 	if err != nil {
 		return user, err
 	}
-	_, err = stmt.Exec(&user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.PhotoProfile, &user.RoleId,
+	_, err = stmt.Exec(&user.FirstName, &user.LastName, &user.Email, &user.PhoneNumber, &user.Username, &user.Password, &user.Image, &user.ImageURL, &user.ThumbnailURL, &user.RoleId,
 		&user.Instagram, &user.Facebook, &user.Twitter, &user.LinkedIn, &user.UpdatedAt, uuid.String())
 	if err != nil {
 		return user, err

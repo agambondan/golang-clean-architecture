@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang-youtube-api/model"
@@ -8,6 +9,7 @@ import (
 	"golang-youtube-api/security"
 	"golang-youtube-api/service"
 	"golang-youtube-api/utils"
+	"golang-youtube-api/utils/google"
 	"net/http"
 	"strconv"
 	"strings"
@@ -39,29 +41,20 @@ func NewUserController(repo *repository.Repositories, redis security.Interface, 
 func (c *userController) SaveUser(ctx *gin.Context) {
 	var user model.User
 	var err error
-	firstName := ctx.PostForm("first_name")
-	lastName := ctx.PostForm("last_name")
-	email := ctx.PostForm("email")
-	password := ctx.PostForm("password")
-	username := ctx.PostForm("username")
-	phoneNumber := ctx.PostForm("phone_number")
-	roleID := ctx.PostForm("role_id")
-	instagram := ctx.PostForm("instagram")
-	facebook := ctx.PostForm("facebook")
-	twitter := ctx.PostForm("twitter")
-	linkedIn := ctx.PostForm("linkedin")
-	if firstName != "" && lastName != "" && email != "" {
-		user.FirstName = firstName
-		user.LastName = lastName
-		user.Email = email
-		user.Password = password
-		user.Username = username
-		user.PhoneNumber = phoneNumber
+	contentType := ctx.ContentType()
+	if contentType != "application/json" {
+		user.FirstName = ctx.PostForm("first_name")
+		user.LastName = ctx.PostForm("last_name")
+		user.Email = ctx.PostForm("email")
+		user.Password = ctx.PostForm("password")
+		user.Username = ctx.PostForm("username")
+		user.PhoneNumber = ctx.PostForm("phone_number")
+		roleID := ctx.PostForm("role_id")
 		user.RoleId, _ = strconv.ParseUint(roleID, 10, 64)
-		user.Instagram = instagram
-		user.Facebook = facebook
-		user.Twitter = twitter
-		user.LinkedIn = linkedIn
+		user.Instagram = ctx.PostForm("instagram")
+		user.Facebook = ctx.PostForm("facebook")
+		user.Twitter = ctx.PostForm("twitter")
+		user.LinkedIn = ctx.PostForm("linkedin")
 	} else {
 		if err = ctx.ShouldBindJSON(&user); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -69,6 +62,11 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 			})
 			return
 		}
+	}
+	validate := user.Validate("")
+	if len(validate) != 0 {
+		ctx.JSON(http.StatusBadRequest, validate)
+		return
 	}
 	roleFindById, err := c.roleService.FindById(user.RoleId)
 	if err != nil || roleFindById.Name == "" {
@@ -87,24 +85,21 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Role not found"})
 		return
 	}
-	validate := user.Validate("")
-	if len(validate) != 0 {
-		ctx.JSON(http.StatusBadRequest, validate)
-		return
-	}
 	user.Prepare()
-	filenames, err := utils.CreateUploadPhoto(ctx, user.UUID.String(), "/user")
+	uploadFile, err := google.UploadImageFileToAssets(ctx, "user", user.UUID.String(), utils.DriveImagesId)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	user.PhotoProfile = strings.Join(filenames, ", ")
+	user.Image = uploadFile.Name
+	user.ImageURL = fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s",uploadFile.Id)
+	user.ThumbnailURL = uploadFile.ThumbnailLink
 	userCreate, err := c.userService.Create(&user)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
+		ctx.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"data": userCreate, "filenames": filenames})
+	ctx.JSON(http.StatusOK, gin.H{"data": userCreate, "filename": uploadFile.Name})
 }
 
 func (c *userController) GetUsers(ctx *gin.Context) {
@@ -232,7 +227,7 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	if checkIdUser.UUID != uuidParam && checkIdUser.RoleId != 1 {
+	if checkIdUser.UUID != uuidParam || checkIdUser.RoleId != 1 {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
 		return
 	} else {
@@ -261,8 +256,8 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 		}
 		user.UUID = checkIdUser.UUID
 		if contentType != "application/json" {
-			filenames, err = utils.CreateUploadPhoto(ctx, user.UUID.String(), "/user")
-			user.PhotoProfile = strings.Join(filenames, "")
+			filenames, err = utils.CreateUploadPhotoMachine(ctx, user.UUID.String(), "/user")
+			user.Image = strings.Join(filenames, "")
 		}
 		userUpdateById, err := c.userService.UpdateById(uuidParam, &user)
 		if err != nil {

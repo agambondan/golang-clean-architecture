@@ -1,15 +1,16 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"golang-youtube-api/model"
 	"golang-youtube-api/repository"
 	"golang-youtube-api/security"
 	"golang-youtube-api/service"
 	"golang-youtube-api/utils"
+	"golang-youtube-api/utils/google"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type categoryController struct {
@@ -44,9 +45,9 @@ func (c *categoryController) SaveCategory(ctx *gin.Context) {
 	} else {
 		var category model.Category
 		category.Prepare()
-		name := ctx.PostForm("name")
-		if name != "" {
-			category.Name = name
+		contentType := ctx.ContentType()
+		if contentType != "application/json" {
+			category.Name = ctx.PostForm("name")
 		} else {
 			if err = ctx.ShouldBindJSON(&category); err != nil {
 				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -56,12 +57,14 @@ func (c *categoryController) SaveCategory(ctx *gin.Context) {
 			}
 		}
 		category.Validate("")
-		filenames, err := utils.CreateUploadPhoto(ctx, "", "categories")
+		uploadFile, err := google.UploadImageFileToAssets(ctx, "categories", "", utils.DriveCategoriesId)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			ctx.JSON(http.StatusInternalServerError, err)
 			return
 		}
-		category.Thumbnail = strings.Join(filenames, "")
+		category.Image = uploadFile.Name
+		category.ImageURL = fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
+		category.ThumbnailURL = uploadFile.ThumbnailLink
 		createCategory, err := c.categoryService.Create(&category)
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

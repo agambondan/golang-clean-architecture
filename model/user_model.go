@@ -16,7 +16,9 @@ type User struct {
 	PhoneNumber  string    `json:"phone_number,omitempty"`
 	Username     string    `json:"username,omitempty"`
 	Password     string    `json:"password,omitempty"`
-	PhotoProfile string    `json:"image,omitempty"`
+	Image        string    `json:"image,omitempty"`
+	ImageURL     string    `json:"image_url,omitempty"`
+	ThumbnailURL string    `json:"thumbnail_url,omitempty"`
 	RoleId       uint64    `json:"role_id,omitempty"`
 	Instagram    string    `json:"instagram,omitempty"`
 	Facebook     string    `json:"facebook,omitempty"`

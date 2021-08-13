@@ -7,6 +7,7 @@ import (
 	"golang-youtube-api/http/middlewares"
 	"golang-youtube-api/repository"
 	"golang-youtube-api/security"
+	"golang-youtube-api/security/google/oauth"
 	"golang-youtube-api/utils/pages/view"
 	"log"
 	"net/http"
@@ -34,7 +35,14 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes := server.Router
 
 	//Home Routing
-	routes.GET("/", Home)
+	routes.GET("/", func(context *gin.Context) {
+		context.JSON(http.StatusOK, gin.H{"message": "Hello World"})
+	})
+
+	// OAuth
+	routes.GET("/oauth", googleLogin)
+	routes.GET("/oauth/google", oauth.HandleGoogleLogin)
+	routes.GET("/oauth/google/callback", oauth.CallBackFromGoogle)
 
 	// Auth Login API
 	routes.POST("/login", newLoginController.Login)
@@ -87,7 +95,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/slug/post/:title", newPostController.GetPostByTitle)
 }
 
-func Home(ctx *gin.Context) {
+func googleLogin(ctx *gin.Context) {
 	ctx.Writer.Header().Set("Content-Type", "text/html; charset=utf-8")
 	ctx.Writer.WriteHeader(http.StatusOK)
 	ctx.Writer.Write([]byte(view.IndexPage))

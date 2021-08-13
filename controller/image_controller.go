@@ -46,7 +46,7 @@ func (i *imageController) GetImagesByUsername(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	filenames = strings.Split(userFindById.PhotoProfile, ", ")
+	filenames = strings.Split(userFindById.Image, ", ")
 	for i := 0; i < len(filenames); i++ {
 		buffer := utils.WriteImage(userFindById.UUID.String(), "user", filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
@@ -73,7 +73,7 @@ func (i *imageController) GetImagesByPostTitle(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	filenames = strings.Split(postFindById.Thumbnail, ", ")
+	filenames = strings.Split(postFindById.Image, ", ")
 	for i := 0; i < len(filenames); i++ {
 		buffer := utils.WriteImage(postFindById.UserUUID.String(), "post", filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
@@ -100,7 +100,7 @@ func (i *imageController) GetImagesByCategoryName(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	filenames = strings.Split(categoryFindByName.Thumbnail, ", ")
+	filenames = strings.Split(categoryFindByName.ThumbnailURL, ", ")
 	for i := 0; i < len(filenames); i++ {
 		buffer := utils.WriteImage("", "categories", filenames[i])
 		ctx.Writer.Header().Set("X-Frame-Options", "DENY")
@@ -141,14 +141,14 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, err)
 			return
 		}
-		filenames = strings.Split(userFindById.PhotoProfile, ", ")
+		filenames = strings.Split(userFindById.Image, ", ")
 	} else if folderName == "post" {
 		postFindById, err := i.postService.FindById(uint64(id))
 		if err != nil {
 			ctx.JSON(http.StatusBadRequest, err)
 			return
 		}
-		filenames = strings.Split(postFindById.Thumbnail, ", ")
+		filenames = strings.Split(postFindById.Image, ", ")
 	} else {
 		err = errors.New("can't find image")
 		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -181,7 +181,7 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 //		ctx.JSON(http.StatusBadRequest, err)
 //		return
 //	}
-//	filenames = strings.Split(userFindById.PhotoProfile, ", ")
+//	filenames = strings.Split(userFindById.Image, ", ")
 //	for i := 0; i < len(filenames); i++ {
 //		getImageBase64 := utils.GetImageToBase64(userId, "user", filenames[i])
 //		img2html := "<html><body><img src=\"" + getImageBase64 + "\" /></body></html>"
@@ -206,7 +206,7 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 //		ctx.JSON(http.StatusBadRequest, err)
 //		return
 //	}
-//	filenames = strings.Split(postFindById.Thumbnail, ", ")
+//	filenames = strings.Split(postFindById.Image, ", ")
 //	for i := 0; i < len(filenames); i++ {
 //		getImageBase64 := utils.GetImageToBase64(postFindById.UserUUID, "post", filenames[i])
 //		img2html := "<html><body><img src=\"" + getImageBase64 + "\" /></body></html>"
