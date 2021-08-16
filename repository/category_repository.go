@@ -13,6 +13,7 @@ type CategoryRepository interface {
 	FindByName(name string) (model.Category, error)
 	UpdateById(id uint64, category *model.Category) (*model.Category, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 type categoryRepo struct {
@@ -109,4 +110,18 @@ func (r *categoryRepo) DeleteById(id uint64) error {
 		return err
 	}
 	return err
+}
+
+func (r *categoryRepo) Count() (int, error) {
+	var count int
+	queryInsert := fmt.Sprintf("select count(id) from categories")
+	prepare, err := r.db.Prepare(queryInsert)
+	if err != nil {
+		return count, err
+	}
+	err = prepare.QueryRow().Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, err
 }

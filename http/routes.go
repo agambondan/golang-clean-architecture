@@ -63,6 +63,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/role/:id", middlewares.AuthMiddleware(), newRoleController.GetRole)
 	routes.PUT("/role/:id", middlewares.AuthMiddleware(), newRoleController.UpdateRole)
 	routes.DELETE("/role/:id", middlewares.AuthMiddleware(), newRoleController.DeleteRole)
+	routes.GET("/roles/count", middlewares.AuthMiddleware(), newRoleController.CountRoles)
 
 	// Users API
 	routes.POST("/user", newUserController.SaveUser)
@@ -71,6 +72,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/users/role/:role_id", newUserController.GetUsersByRoleId)
 	routes.PUT("/user/:id", newUserController.UpdateUser)
 	routes.DELETE("/user/:id", newUserController.DeleteUser)
+	routes.GET("/users/count", newUserController.CountUsers)
 
 	// Category API
 	routes.POST("/category", newCategoryController.SaveCategory)
@@ -78,6 +80,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/category/:id", newCategoryController.GetCategory)
 	routes.PUT("/category/:id", newCategoryController.UpdateCategory)
 	routes.DELETE("/category/:id", newCategoryController.DeleteCategory)
+	routes.GET("/categories/count", newCategoryController.CountCategories)
 
 	// Post API
 	routes.POST("/post", newPostController.SavePost)
@@ -88,6 +91,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/posts/category/:name", newPostController.GetPostsByCategoryName)
 	routes.PUT("/post/:id", newPostController.UpdatePost)
 	routes.DELETE("/post/:id", newPostController.DeletePost)
+	routes.GET("/posts/count", newPostController.CountPosts)
 
 	// Slug API
 	routes.GET("/slug/user/:username", newUserController.GetUserByUsername)
@@ -100,53 +104,3 @@ func googleLogin(ctx *gin.Context) {
 	ctx.Writer.WriteHeader(http.StatusOK)
 	ctx.Writer.Write([]byte(view.IndexPage))
 }
-
-//func broadcast(ctx *gin.Context) {
-//	webCamera := opencv.NewCameraCapture(0)
-//	fmt.Println(webCamera, "Camera")
-//	if webCamera == nil {
-//		panic("Unable to open camera")
-//	}
-//
-//	defer webCamera.Release()
-//
-//	for {
-//		if webCamera.GrabFrame() {
-//			imgFrame := webCamera.RetrieveFrame(1)
-//			if imgFrame != nil {
-//				fmt.Println(imgFrame.ImageSize())
-//				fmt.Println(imgFrame.ToImage())
-//
-//				// convert IplImage(Intel Image Processing Library)
-//				// to image.Image
-//				goImgFrame := imgFrame.ToImage()
-//
-//				// and then convert to []byte
-//				// with the help of png.Encode() function
-//
-//				frameBuffer := new(bytes.Buffer)
-//				//frameBuffer := make([]byte, imgFrame.ImageSize())
-//				err := png.Encode(frameBuffer, goImgFrame)
-//
-//				if err != nil {
-//					panic(err)
-//				}
-//
-//				// convert the buffer bytes to base64 string - use buf.Bytes() for new image
-//				imgBase64Str := base64.StdEncoding.EncodeToString(frameBuffer.Bytes())
-//
-//				// Embed into an html without PNG file
-//				img2html := "<html><body><img src=\"data:image/png;base64," + imgBase64Str + "\" /></body></html>"
-//
-//				ctx.Writer.Write([]byte(fmt.Sprintf(img2html)))
-//
-//				// TODO :
-//				// encode frames to stream via WebRTC
-//
-//				fmt.Println("Streaming....")
-//
-//			}
-//		}
-//	}
-//
-//}

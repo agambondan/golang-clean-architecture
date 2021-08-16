@@ -19,6 +19,7 @@ type PostCategoryService interface {
 	FindAll() ([]model.PostCategory, error)
 	UpdateById(id uint64, post *model.PostCategory) (*model.PostCategory, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 func (p *postCategoryService) Create(post *model.PostCategory) (*model.PostCategory, error) {
@@ -35,4 +36,8 @@ func (p *postCategoryService) UpdateById(id uint64, post *model.PostCategory) (*
 
 func (p *postCategoryService) DeleteById(id uint64) error {
 	return p.post.DeleteById(id)
+}
+
+func (p *postCategoryService) Count() (int,error) {
+	return p.post.Count()
 }

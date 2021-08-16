@@ -24,6 +24,7 @@ type RoleController interface {
 	GetRole(c *gin.Context)
 	UpdateRole(c *gin.Context)
 	DeleteRole(c *gin.Context)
+	CountRoles(c *gin.Context)
 }
 
 func NewRoleController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) RoleController {
@@ -151,4 +152,13 @@ func (c *roleController) DeleteRole(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Successfully delete role"})
 		return
 	}
+}
+
+func (c *roleController) CountRoles(ctx *gin.Context) {
+	count, err := c.roleService.Count()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, count)
 }

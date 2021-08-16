@@ -34,6 +34,7 @@ type PostController interface {
 	GetPostsByCategoryName(c *gin.Context)
 	UpdatePost(c *gin.Context)
 	DeletePost(c *gin.Context)
+	CountPosts(c *gin.Context)
 }
 
 func NewPostController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) PostController {
@@ -332,4 +333,14 @@ func (p *postController) DeletePost(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Delete Successfully"})
 		return
 	}
+}
+
+
+func (p *postController) CountPosts(ctx *gin.Context) {
+	count, err := p.postService.Count()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, count)
 }

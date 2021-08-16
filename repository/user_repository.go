@@ -16,6 +16,7 @@ type UserRepository interface {
 	FindUserByEmailAndPassword(user *model.User) (model.User, error)
 	UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error)
 	DeleteById(uuid uuid.UUID) error
+	Count() (int, error)
 }
 
 type userRepo struct {
@@ -152,4 +153,18 @@ func (r *userRepo) DeleteById(uuid uuid.UUID) error {
 		return err
 	}
 	return err
+}
+
+func (r *userRepo) Count() (int, error) {
+	var count int
+	queryInsert := fmt.Sprintf("select count(role_id) from users")
+	prepare, err := r.db.Prepare(queryInsert)
+	if err != nil {
+		return count, err
+	}
+	err = prepare.QueryRow().Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, err
 }

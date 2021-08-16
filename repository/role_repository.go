@@ -12,6 +12,7 @@ type RoleRepository interface {
 	FindById(id uint64) (model.Role, error)
 	UpdateById(id uint64, role *model.Role) (*model.Role, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 type roleRepo struct {
@@ -90,4 +91,18 @@ func (r *roleRepo) DeleteById(id uint64) error {
 	}
 	r.db.Exec(query)
 	return err
+}
+
+func (r *roleRepo) Count() (int, error) {
+	var count int
+	queryInsert := fmt.Sprintf("select count(id) from roles")
+	prepare, err := r.db.Prepare(queryInsert)
+	if err != nil {
+		return count, err
+	}
+	err = prepare.QueryRow().Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, err
 }

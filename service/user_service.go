@@ -19,11 +19,12 @@ type UserService interface {
 	Create(user *model.User) (*model.User, error)
 	FindAll(limit, offset int) ([]model.User, error)
 	FindById(uuid uuid.UUID) (model.User, error)
-	FindByUsername(username string)(model.User,error)
+	FindByUsername(username string) (model.User, error)
 	FindAllByRoleId(id uint64) ([]model.User, error)
 	FindUserByEmailAndPassword(user *model.User) (model.User, error)
 	UpdateById(uuid uuid.UUID, user *model.User) (*model.User, error)
 	DeleteById(uuid uuid.UUID) error
+	Count() (int, error)
 }
 
 func (s *userService) Create(user *model.User) (*model.User, error) {
@@ -56,4 +57,8 @@ func (s *userService) UpdateById(uuid uuid.UUID, user *model.User) (*model.User,
 
 func (s *userService) DeleteById(uuid uuid.UUID) error {
 	return s.user.DeleteById(uuid)
+}
+
+func (s *userService) Count() (int, error) {
+	return s.user.Count()
 }

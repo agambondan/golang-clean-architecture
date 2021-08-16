@@ -18,6 +18,7 @@ type PostRepository interface {
 	FindAllByCategoryName(name string, limit, offset int) ([]model.Post, error)
 	UpdateById(id uint64, post *model.Post) (*model.Post, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 type postRepo struct {
@@ -45,12 +46,12 @@ func (r *postRepo) Save(post *model.Post) (*model.Post, error) {
 func (r *postRepo) FindAll(limit, offset int) ([]model.Post, error) {
 	var posts []model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail, u.first_name, "+
-		"u.last_name, u.instagram, u.facebook, u.twitter, u.linkedin, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p "+
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, "+
+		"u.last_name, u.image, u.image_url, u.instagram, u.facebook, u.twitter, u.linkedin, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p "+
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id "+
 		"join categories c on pc.category_id = c.id where p.deleted_at is null "+
-		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail, u.first_name, u.last_name, u.instagram, u.facebook, u.twitter, u.linkedin, p.created_at, p.updated_at "+
-		"order by p.id limit %d offset %d ;", limit, offset)
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, u.last_name, u.image, u.image_url, u.instagram, u.facebook, u.twitter, u.linkedin, p.created_at, p.updated_at "+
+		"order by p.id desc limit %d offset %d ;", limit, offset)
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return posts, err
@@ -61,7 +62,7 @@ func (r *postRepo) FindAll(limit, offset int) ([]model.Post, error) {
 	}
 	for rows.Next() {
 		var post model.Post
-		err = rows.Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL, &post.Author.FirstName, &post.Author.LastName,
+		err = rows.Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL, &post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL,
 			&post.Author.Instagram, &post.Author.Facebook, &post.Author.Twitter, &post.Author.LinkedIn, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 		if err != nil {
 			return posts, err
@@ -79,17 +80,17 @@ func (r *postRepo) FindAll(limit, offset int) ([]model.Post, error) {
 func (r *postRepo) FindById(id uint64) (model.Post, error) {
 	var post model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id , p.title , p.description , p.image, p.image_url, p.thumbnail , u.uuid, u.first_name ," +
-		" u.last_name , array_agg(distinct c.\"name\") as categories , p.created_at , p.updated_at from posts p " +
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.uuid, u.first_name, " +
+		"u.last_name, u.image, u.image_url, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p " +
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id " +
 		"join categories c on pc.category_id = c.id where p.id=$1 and p.deleted_at is null " +
-		"group by p.id, p.title , p.description , p.image, p.image_url, p.thumbnail , u.uuid, u.first_name , u.last_name , p.created_at , p.updated_at;")
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.uuid, u.first_name, u.last_name, u.image, u.image_url, p.created_at, p.updated_at;")
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return post, err
 	}
 	err = prepare.QueryRow(&id).Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL,
-		&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
+		&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return post, err
 	}
@@ -104,17 +105,17 @@ func (r *postRepo) FindById(id uint64) (model.Post, error) {
 func (r *postRepo) FindByTitle(title string) (model.Post, error) {
 	var post model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id , p.title , p.description , p.image, p.image_url, p.thumbnail , u.uuid, u.first_name ,"+
-		" u.last_name , array_agg(distinct c.\"name\") as categories , p.created_at , p.updated_at from posts p "+
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.uuid, u.first_name, "+
+		"u.last_name, u.image, u.image_url, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p "+
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id "+
 		"join categories c on pc.category_id = c.id where p.title like '%s' and p.deleted_at is null "+
-		"group by p.id, p.title , p.description , p.image, p.image_url, p.thumbnail , u.uuid, u.first_name , u.last_name , p.created_at , p.updated_at;", title)
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.uuid, u.first_name, u.last_name, u.image, u.image_url, p.created_at, p.updated_at;", title)
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return post, err
 	}
 	err = prepare.QueryRow().Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL,
-		&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
+		&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		return post, err
 	}
@@ -129,11 +130,11 @@ func (r *postRepo) FindByTitle(title string) (model.Post, error) {
 func (r *postRepo) FindAllByUserId(uuid uuid.UUID) ([]model.Post, error) {
 	var posts []model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id , p.title , p.description , p.image, p.image_url, p.thumbnail , p.user_uuid, u.first_name ," +
-		" u.last_name , array_agg(distinct c.\"name\") as categories , p.created_at , p.updated_at from posts p " +
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, p.user_uuid, u.first_name, " +
+		"u.last_name, u.image, u.image_url, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p " +
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id " +
 		"join categories c on pc.category_id = c.id where p.user_uuid = $1 and p.deleted_at is null " +
-		"group by p.id, p.title , p.description , p.image, p.image_url, p.thumbnail , u.uuid, u.first_name , u.last_name , p.created_at , p.updated_at;")
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.uuid, u.first_name, u.last_name, u.image, u.image_url, p.created_at, p.updated_at;")
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return posts, err
@@ -145,7 +146,7 @@ func (r *postRepo) FindAllByUserId(uuid uuid.UUID) ([]model.Post, error) {
 	for rows.Next() {
 		var post model.Post
 		err := rows.Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL,
-			&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
+			&post.UserUUID, &post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 		if err != nil {
 			return posts, err
 		}
@@ -162,11 +163,11 @@ func (r *postRepo) FindAllByUserId(uuid uuid.UUID) ([]model.Post, error) {
 func (r *postRepo) FindAllByUsername(username string) ([]model.Post, error) {
 	var posts []model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id , p.title , p.description , p.image, p.image_url, p.thumbnail , u.first_name ," +
-		" u.last_name , array_agg(distinct c.\"name\") as categories , p.created_at , p.updated_at from posts p " +
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, " +
+		"u.last_name, u.image, u.image_url, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p " +
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id " +
 		"join categories c on pc.category_id = c.id where u.username = $1 and p.deleted_at is null " +
-		"group by p.id, p.title , p.description , p.image, p.image_url, p.thumbnail , u.first_name , u.last_name , p.created_at , p.updated_at;")
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, u.last_name, u.image, u.image_url, p.created_at, p.updated_at;")
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return posts, err
@@ -178,7 +179,7 @@ func (r *postRepo) FindAllByUsername(username string) ([]model.Post, error) {
 	for rows.Next() {
 		var post model.Post
 		err := rows.Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL,
-			&post.Author.FirstName, &post.Author.LastName, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
+			&post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 		if err != nil {
 			return posts, err
 		}
@@ -195,12 +196,12 @@ func (r *postRepo) FindAllByUsername(username string) ([]model.Post, error) {
 func (r *postRepo) FindAllByCategoryName(name string, limit, offset int) ([]model.Post, error) {
 	var posts []model.Post
 	var arrayCategory []uint8
-	query := fmt.Sprintf("select p.id , p.title , p.description , p.image, p.image_url, p.thumbnail , u.first_name ,"+
-		" u.last_name , array_agg(distinct c.\"name\") as categories , p.created_at , p.updated_at from posts p "+
+	query := fmt.Sprintf("select p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, "+
+		"u.last_name, u.image, u.image_url, array_agg(distinct c.\"name\") as categories, p.created_at, p.updated_at from posts p "+
 		"join users u on p.user_uuid = u.uuid join post_categories pc on p.id = pc.post_id "+
 		"join categories c on pc.category_id = c.id where c.name = '%s' and p.deleted_at is null "+
-		"group by p.id, p.title , p.description , p.image, p.image_url, p.thumbnail , u.first_name , u.last_name , p.created_at , p.updated_at "+
-		"order by p.id limit %d offset %d ;", name, limit, offset)
+		"group by p.id, p.title, p.description, p.image, p.image_url, p.thumbnail_url, u.first_name, u.last_name, u.image, u.image_url, p.created_at, p.updated_at "+
+		"order by p.id desc limit %d offset %d ;", name, limit, offset)
 	prepare, err := r.db.Prepare(query)
 	if err != nil {
 		return posts, err
@@ -212,7 +213,7 @@ func (r *postRepo) FindAllByCategoryName(name string, limit, offset int) ([]mode
 	for rows.Next() {
 		var post model.Post
 		err = rows.Scan(&post.ID, &post.Title, &post.Description, &post.Image, &post.ImageURL, &post.ThumbnailURL,
-			&post.Author.FirstName, &post.Author.LastName, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
+			&post.Author.FirstName, &post.Author.LastName, &post.Author.Image, &post.Author.ImageURL, &arrayCategory, &post.CreatedAt, &post.UpdatedAt)
 		if err != nil {
 			return posts, err
 		}
@@ -246,4 +247,18 @@ func (r *postRepo) DeleteById(id uint64) error {
 		return err
 	}
 	return err
+}
+
+func (r *postRepo) Count() (int, error) {
+	var count int
+	queryInsert := fmt.Sprintf("select count(id) from posts")
+	prepare, err := r.db.Prepare(queryInsert)
+	if err != nil {
+		return count, err
+	}
+	err = prepare.QueryRow().Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, err
 }

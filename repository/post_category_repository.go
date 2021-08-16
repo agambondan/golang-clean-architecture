@@ -11,6 +11,7 @@ type PostCategoryRepository interface {
 	FindAll() ([]model.PostCategory, error)
 	UpdateById(id uint64, post *model.PostCategory) (*model.PostCategory, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 type postCategoryRepo struct {
@@ -73,4 +74,19 @@ func (p *postCategoryRepo) DeleteById(id uint64) error {
 		return err
 	}
 	return err
+}
+
+
+func (p *postCategoryRepo) Count() (int, error) {
+	var count int
+	queryInsert := fmt.Sprintf("select count(post_id) from post_categories")
+	prepare, err := p.db.Prepare(queryInsert)
+	if err != nil {
+		return count, err
+	}
+	err = prepare.QueryRow().Scan(&count)
+	if err != nil {
+		return count, err
+	}
+	return count, err
 }

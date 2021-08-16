@@ -28,6 +28,7 @@ type CategoryController interface {
 	GetCategoryByName(c *gin.Context)
 	UpdateCategory(c *gin.Context)
 	DeleteCategory(c *gin.Context)
+	CountCategories(c *gin.Context)
 }
 
 func NewCategoryController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) CategoryController {
@@ -189,4 +190,13 @@ func (c *categoryController) DeleteCategory(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"message": "Successfully delete category"})
 		return
 	}
+}
+
+func (c *categoryController) CountCategories(ctx *gin.Context) {
+	count, err := c.categoryService.Count()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, count)
 }

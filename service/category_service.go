@@ -21,6 +21,7 @@ type CategoryService interface {
 	FindByName(name string) (model.Category, error)
 	UpdateById(id uint64, category *model.Category) (*model.Category, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 func (p *categoryService) Create(category *model.Category) (*model.Category, error) {
@@ -45,4 +46,8 @@ func (p *categoryService) UpdateById(id uint64, category *model.Category) (*mode
 
 func (p *categoryService) DeleteById(id uint64) error {
 	return p.category.DeleteById(id)
+}
+
+func (p *categoryService) Count() (int, error) {
+	return p.category.Count()
 }

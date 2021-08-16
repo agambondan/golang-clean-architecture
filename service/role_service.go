@@ -20,6 +20,7 @@ type RoleService interface {
 	FindById(id uint64) (model.Role, error)
 	UpdateById(id uint64, role *model.Role) (*model.Role, error)
 	DeleteById(id uint64) error
+	Count() (int, error)
 }
 
 func (p *roleService) Create(role *model.Role) (*model.Role, error) {
@@ -40,4 +41,8 @@ func (p *roleService) UpdateById(id uint64, role *model.Role) (*model.Role, erro
 
 func (p *roleService) DeleteById(id uint64) error {
 	return p.role.DeleteById(id)
+}
+
+func (p *roleService) Count() (int,error) {
+	return p.role.Count()
 }

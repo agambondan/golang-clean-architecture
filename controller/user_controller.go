@@ -30,6 +30,7 @@ type UserController interface {
 	GetUsersByRoleId(c *gin.Context)
 	UpdateUser(c *gin.Context)
 	DeleteUser(c *gin.Context)
+	CountUsers(c *gin.Context)
 }
 
 func NewUserController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) UserController {
@@ -92,7 +93,7 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		return
 	}
 	user.Image = uploadFile.Name
-	user.ImageURL = fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s",uploadFile.Id)
+	user.ImageURL = fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
 	user.ThumbnailURL = uploadFile.ThumbnailLink
 	userCreate, err := c.userService.Create(&user)
 	if err != nil {
@@ -288,4 +289,13 @@ func (c *userController) DeleteUser(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusOK, gin.H{"message": "Delete User Successfully"})
 	}
+}
+
+func (c *userController) CountUsers(ctx *gin.Context) {
+	count, err := c.userService.Count()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err)
+		return
+	}
+	ctx.JSON(http.StatusOK, count)
 }
