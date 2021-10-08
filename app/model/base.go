@@ -23,8 +23,10 @@ type BaseDate struct {
 }
 
 func (b *BaseUUID) BeforeCreate(db *gorm.DB) error {
-	newUUID, _ := uuid.NewUUID()
-	b.ID = &newUUID
+	if b.ID == nil {
+		newUUID, _ := uuid.NewUUID()
+		b.ID = &newUUID
+	}
 	return nil
 }
 

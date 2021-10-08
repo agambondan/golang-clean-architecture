@@ -10,6 +10,7 @@ import (
 	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"go-blog-api/app/utils"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -82,8 +83,6 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 	roleFindById, err := c.roleService.FindById(user.RoleId)
 	if err != nil || *roleFindById.Name == "" {
 		role := model.Role{}
-		roleID := int64(1)
-		role.ID = &roleID
 		roleName := "admin"
 		role.Name = &roleName
 		_, err = c.roleService.Create(&role)
@@ -97,27 +96,28 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Role not found"})
 		return
 	}
-	userCreate, err := c.userService.Create(&user)
+	_, err = c.userService.Create(&user)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, err)
 		return
 	}
 	uploadFile, err := utils.UploadImageFileToAssets(ctx, "user", user.ID.String(), utils.DriveImagesId)
 	if err != nil {
-		c.userService.DeleteById(user.ID)
+		log.Println(err)
+		_ = c.userService.DeleteById(user.ID)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err, "message": err.Error()})
 		return
 	}
-	userCreate.Image = &uploadFile.Name
+	user.Image = &uploadFile.Name
 	imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
-	userCreate.ImageURL = &imageURL
-	userCreate.ThumbnailURL = &uploadFile.ThumbnailLink
-	updateById, err := c.userService.UpdateById(user.ID, userCreate)
+	user.ImageURL = &imageURL
+	user.ThumbnailURL = &uploadFile.ThumbnailLink
+	_, err = c.userService.UpdateById(user.ID, &user)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"data": updateById, "error": err})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"data": user, "error": err})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"data": updateById, "filename": uploadFile.Name})
+	ctx.JSON(http.StatusOK, gin.H{"data": user, "filename": uploadFile.Name})
 }
 
 func (c *userController) GetUsers(ctx *gin.Context) {

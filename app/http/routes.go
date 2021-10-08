@@ -59,21 +59,21 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	//routes.GET("/camera", broadcast)
 
 	// Role API
-	routes.POST("/role", middlewares.AuthMiddleware(), newRoleController.SaveRole)
+	routes.POST("/roles", middlewares.AuthMiddleware(), newRoleController.SaveRole)
 	routes.GET("/roles", middlewares.AuthMiddleware(), newRoleController.GetRoles)
-	routes.GET("/role/:id", middlewares.AuthMiddleware(), newRoleController.GetRole)
-	routes.PUT("/role/:id", middlewares.AuthMiddleware(), newRoleController.UpdateRole)
-	routes.DELETE("/role/:id", middlewares.AuthMiddleware(), newRoleController.DeleteRole)
+	routes.GET("/roles/:id", middlewares.AuthMiddleware(), newRoleController.GetRole)
+	routes.PUT("/roles/:id", middlewares.AuthMiddleware(), newRoleController.UpdateRole)
+	routes.DELETE("/roles/:id", middlewares.AuthMiddleware(), newRoleController.DeleteRole)
 	routes.GET("/roles/count", middlewares.AuthMiddleware(), newRoleController.CountRoles)
 
 	// Users API
-	routes.POST("/user", newUserController.SaveUser)
-	routes.GET("/users", newUserController.GetUsers)
-	routes.GET("/user/:id", newUserController.GetUser)
-	routes.GET("/users/role/:role_id", newUserController.GetUsersByRoleId)
-	routes.PUT("/user/:id", newUserController.UpdateUser)
-	routes.DELETE("/user/:id", newUserController.DeleteUser)
-	routes.GET("/users/count", newUserController.CountUsers)
+	routes.POST("/users", middlewares.CORSMiddleware(), newUserController.SaveUser)
+	routes.GET("/users", middlewares.CORSMiddleware(), newUserController.GetUsers)
+	routes.GET("/users/:id", middlewares.CORSMiddleware(), newUserController.GetUser)
+	routes.GET("/users/role/:role_id", middlewares.CORSMiddleware(), newUserController.GetUsersByRoleId)
+	routes.PUT("/user/:id", middlewares.CORSMiddleware(), newUserController.UpdateUser)
+	routes.DELETE("/users/:id", middlewares.CORSMiddleware(), newUserController.DeleteUser)
+	routes.GET("/users/count", middlewares.CORSMiddleware(), newUserController.CountUsers)
 
 	// Category API
 	routes.POST("/category", newCategoryController.SaveCategory)
@@ -84,15 +84,15 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/categories/count", newCategoryController.CountCategories)
 
 	// Article API
-	routes.POST("/post", middlewares.CORSMiddleware(), newArticleController.SaveArticle)
+	routes.POST("/posts", middlewares.CORSMiddleware(), newArticleController.SaveArticle)
 	routes.GET("/posts", newArticleController.GetArticles)
 	routes.GET("/post/:id", newArticleController.GetArticle)
 	routes.GET("/posts/uuid/:id", newArticleController.GetArticlesByUserId)
 	routes.GET("/posts/username/:username", newArticleController.GetArticlesByUsername)
 	routes.GET("/posts/category/:name", newArticleController.GetArticlesByCategoryName)
 	routes.GET("/posts/category/:name/count", newArticleController.GetCountArticlesByCategoryName)
-	routes.PUT("/post/:id", newArticleController.UpdateArticle)
-	routes.DELETE("/post/:id", newArticleController.DeleteArticle)
+	routes.PUT("/posts/:id", newArticleController.UpdateArticle)
+	routes.DELETE("/posts/:id", newArticleController.DeleteArticle)
 	routes.GET("/posts/count", newArticleController.CountArticles)
 
 	// Slug API

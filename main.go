@@ -10,12 +10,15 @@ import (
 var (
 	server      http.Server
 	configure   config.Configuration
-	pathFileEnv = "/home/agam/IdeaProjects/web-blog/New/golang-clean-architecture-gorm/.env"
+	pathFileEnv = "./.env"
 )
 
 func init() {
 	if err := godotenv.Load(pathFileEnv); err != nil {
 		log.Println("no env gotten")
+		if err = godotenv.Load("./.env.example"); err != nil {
+			log.Println("no env gotten")
+		}
 	}
 }
 

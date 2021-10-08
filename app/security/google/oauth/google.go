@@ -35,7 +35,7 @@ func CallBackFromGoogle(c *gin.Context) {
 		c.Redirect(http.StatusUnauthorized, "/")
 		return
 	} else {
-		tokFile := "token.json"
+		tokFile := "./assets/docs/token.json"
 		token := getTokenFromWeb(AuthConfig(), code)
 		saveToken(tokFile, token)
 		c.JSON(http.StatusOK, gin.H{"installed": token})

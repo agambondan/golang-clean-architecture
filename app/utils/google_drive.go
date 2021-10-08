@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"go-blog-api/app/security/google/serviceaccount"
@@ -15,13 +16,14 @@ func UploadImageFileToAssets(c *gin.Context, folder, userId, parentId string) (*
 	if err != nil {
 		return driveFile, err
 	}
-	client := serviceaccount.NewServiceAccount("credentials-web-go-blog-service-account.json")
-	service, err := drive.NewService(c, option.WithHTTPClient(client))
+	client := serviceaccount.NewServiceAccount("./assets/docs/credentials-web-go-blog-service-account.json")
+	service, err := drive.NewService(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		return driveFile, err
 	}
 	if userId != "" {
 		q := fmt.Sprintf("name = '%s' and parents = '%s'", userId, parentId)
+		fmt.Println(q)
 		fileList, err := service.Files.List().Q(q).Do()
 		if err != nil {
 			return driveFile, err
