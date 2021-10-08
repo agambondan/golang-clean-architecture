@@ -1,0 +1,16 @@
+/*
+!/app/
+!/docs/
+!/tests/
+!/.env.example
+!/.gitignore
+!/docker-compose.yml
+!/Dockerfile
+!/go.mod
+!/go.sum
+!/main.go
+!/README.md
+!/LICENSE
+!/*.sh
+!/Makefile
+!/Procfile
