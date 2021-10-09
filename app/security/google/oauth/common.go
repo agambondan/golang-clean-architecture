@@ -46,7 +46,6 @@ func AuthConfig() *oauth2.Config {
 	if err != nil {
 		log.Fatalf("Unable to parse client secret file to config: %v", err)
 	}
-	fmt.Println(config.RedirectURL)
 	return config
 }
 
@@ -60,7 +59,6 @@ func GetClient(config *oauth2.Config) *http.Client {
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Println(tok)
 	return config.Client(context.Background(), tok)
 }
 

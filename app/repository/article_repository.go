@@ -138,7 +138,6 @@ func (a *articleRepo) UpdateById(id int64, article *model.Article) (*model.Artic
 	if err != nil {
 		return findById, err
 	}
-	//_ = utils.Merge(findById, &article)
 	if tx := a.db.Updates(&article); tx.Error != nil {
 		return article, tx.Error
 	}
@@ -156,6 +155,6 @@ func (a *articleRepo) DeleteById(id int64) error {
 
 func (a *articleRepo) Count() (int64, error) {
 	var count int64
-	a.db.Model(&[]model.Article{}).Count(&count)
+	a.db.Table("article").Select("id").Count(&count)
 	return count, nil
 }

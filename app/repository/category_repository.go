@@ -53,7 +53,6 @@ func (c *categoryRepo) FindByName(name string) (*model.Category, error) {
 }
 
 func (c *categoryRepo) UpdateById(id int64, category *model.Category) (*model.Category, error) {
-
 	findById, err := c.FindById(id)
 	if err != nil {
 		return findById, err
@@ -75,6 +74,6 @@ func (c *categoryRepo) DeleteById(id int64) error {
 
 func (c *categoryRepo) Count() (int64, error) {
 	var count int64
-	c.db.Model(&[]model.Category{}).Count(&count)
+	c.db.Table("category").Select("id").Count(&count)
 	return count, nil
 }

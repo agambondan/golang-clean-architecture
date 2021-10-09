@@ -21,7 +21,7 @@ func BuildResponse(status bool, message string, data interface{}) Response {
 
 // BuildErrorResponse method is to show response failed of the request.
 func BuildErrorResponse(message string, errMessage string, data interface{}) Response {
-	splittedErrors := strings.Split(errMessage, "\n")
-	res := Response{Status: false, Message: message, Error: splittedErrors, Data: data}
+	splitErrors := strings.Split(errMessage, "\n")
+	res := Response{Status: false, Message: message, Error: splitErrors, Data: data}
 	return res
 }

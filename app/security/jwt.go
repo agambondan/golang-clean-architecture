@@ -26,11 +26,11 @@ var _ TokenInterface = &Token{}
 
 func (t *Token) CreateToken(userUUID uuid.UUID) (*TokenDetails, error) {
 	td := &TokenDetails{}
-	td.AtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
+	td.AtExpires = time.Now().Add(time.Hour * 24).Unix()
 	newUUID, _ := uuid.NewUUID()
 	td.TokenUuid = newUUID.String()
 
-	td.RtExpires = time.Now().Add(time.Hour * 24 * 30).Unix()
+	td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
 	td.RefreshUuid = td.TokenUuid + "++" + userUUID.String()
 
 	var err error

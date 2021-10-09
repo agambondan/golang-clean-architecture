@@ -23,7 +23,6 @@ func UploadImageFileToAssets(c *gin.Context, folder, userId, parentId string) (*
 	}
 	if userId != "" {
 		q := fmt.Sprintf("name = '%s' and parents = '%s'", userId, parentId)
-		fmt.Println(q)
 		fileList, err := service.Files.List().Q(q).Do()
 		if err != nil {
 			return driveFile, err

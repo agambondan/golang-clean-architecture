@@ -3,7 +3,6 @@ package serviceaccount
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/drive/v3"
@@ -25,7 +24,7 @@ func NewServiceAccount(secretFile string) *http.Client {
 	}{}
 	err = json.Unmarshal(b, &s)
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 	config := &jwt.Config{
 		Email:      s.Email,

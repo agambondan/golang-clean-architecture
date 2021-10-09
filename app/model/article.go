@@ -9,17 +9,15 @@ import (
 type Article struct {
 	BaseInt
 	ArticleAPI
-	UserID     *uuid.UUID `json:"user_id,omitempty"`
-	Author     *User `json:"-" gorm:"-"`
+	BaseImage
+	UserID     *uuid.UUID  `json:"user_id,omitempty"`
+	Author     *User       `json:"author,omitempty" gorm:"-"`
 	Categories *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
 }
 
 type ArticleAPI struct {
-	Title        *string `json:"title,omitempty"`
-	Description  *string `json:"description,omitempty"`
-	Image        *string `json:"image,omitempty"`
-	ImageURL     *string `json:"image_url,omitempty"`
-	ThumbnailURL *string `json:"thumbnail_url,omitempty"`
+	Title       *string `json:"title,omitempty" gorm:"type:varchar(256);not null;index:idx_title_deleted_at,unique,where:deleted_at is null"`
+	Description *string `json:"description,omitempty" gorm:"type:text;not null"`
 }
 
 type PublicArticle struct {
@@ -28,7 +26,6 @@ type PublicArticle struct {
 	Image        *string    `json:"image,omitempty"`
 	ImageURL     *string    `json:"image_url,omitempty"`
 	ThumbnailURL *string    `json:"thumbnail_url,omitempty"`
-	Categories   []*string  `json:"categories,omitempty"`
 	FirstName    *string    `json:"first_name,omitempty"`
 	LastName     *string    `json:"last_name,omitempty"`
 	UserImage    *string    `json:"user_image,omitempty"`
@@ -79,7 +76,7 @@ func (p *Article) Validate(action string) map[string]string {
 	switch strings.ToLower(action) {
 	case "images":
 		if p.ImageURL != nil || p.ThumbnailURL != nil {
-			if *p.ImageURL == "" || *p.ThumbnailURL == "" {
+			if *p.ImageURL == "" || len(*p.ImageURL) < 45 || *p.ThumbnailURL == "" {
 				errorMessages["image"] = "image url is required"
 			}
 		}

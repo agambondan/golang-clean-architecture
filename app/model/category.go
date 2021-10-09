@@ -6,11 +6,13 @@ import (
 
 type Category struct {
 	BaseInt
-	Name         *string    `json:"name,omitempty"`
-	Image        *string    `json:"image,omitempty"`
-	ImageURL     *string    `json:"image_url,omitempty"`
-	ThumbnailURL *string    `json:"thumbnail,omitempty"`
-	Articles     *[]Article `json:"articles,omitempty" gorm:"many2many:article_categories"`
+	CategoryAPI
+	BaseImage
+	Articles *[]Article `json:"articles,omitempty" gorm:"many2many:article_categories"`
+}
+
+type CategoryAPI struct {
+	Name *string `json:"name,omitempty" gorm:"type:varchar(16);not null;index:idx_category_name_deleted_at,unique,where:deleted_at is null"`
 }
 
 func (c *Category) Validate(action string) map[string]string {

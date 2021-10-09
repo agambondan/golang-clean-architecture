@@ -36,25 +36,25 @@ func NewRoleController(repo *repository.Repositories, redis security.Interface, 
 func (c *roleController) SaveRole(ctx *gin.Context) {
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
 	if *userCheck.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	} else {
 		var role model.Role
 		if err := ctx.ShouldBindJSON(&role); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": "invalid json"})
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
 			return
 		}
 		validate := role.Validate("")
 		if len(validate) != 0 {
-			ctx.JSON(http.StatusBadRequest, validate)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
 			return
 		}
-		createRole, err := c.roleService.Create(&role)
+		_, err = c.roleService.Create(&role)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("failed to create role", err.Error(), role))
 			return
 		}
-		ctx.JSON(http.StatusOK, createRole)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", role))
 	}
 }
 
@@ -62,15 +62,15 @@ func (c *roleController) GetRoles(ctx *gin.Context) {
 	var roles *[]model.Role
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
 	if *userCheck.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	} else {
 		roles, err = c.roleService.FindAll()
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": err})
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("roles not found", err.Error(), nil))
 			return
 		}
-		ctx.JSON(http.StatusOK, roles)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", roles))
 		return
 	}
 }
@@ -78,22 +78,22 @@ func (c *roleController) GetRoles(ctx *gin.Context) {
 func (c *roleController) GetRole(ctx *gin.Context) {
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
 	if *userCheck.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	} else {
 		idParam := ctx.Param("id")
 		id, err := strconv.Atoi(idParam)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
 			return
 		}
 		id64 := int64(id)
 		roleFindById, err := c.roleService.FindById(&id64)
 		if err != nil {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("role not found", err.Error(), nil))
 			return
 		}
-		ctx.JSON(http.StatusOK, roleFindById)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", roleFindById))
 		return
 	}
 }
@@ -102,32 +102,32 @@ func (c *roleController) UpdateRole(ctx *gin.Context) {
 	role := model.Role{}
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
 	if *userCheck.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	} else {
 		idParam := ctx.Param("id")
 		id, err := strconv.Atoi(idParam)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
 			return
 		}
 		id64 := int64(id)
 		roleFindById, err := c.roleService.FindById(&id64)
 		if err != nil {
-			ctx.JSON(http.StatusNotFound, err)
+			ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("role not found", err.Error(), nil))
 			return
 		}
 		if err = ctx.ShouldBindJSON(&role); err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
 			return
 		}
 		roleUpdateById, err := c.roleService.UpdateById(&id64, &role)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("can't update roles", err.Error(), roleUpdateById))
 			return
 		}
 		roleUpdateById.CreatedAt = roleFindById.CreatedAt
-		ctx.JSON(http.StatusOK, roleUpdateById)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", roleUpdateById))
 		return
 	}
 }
@@ -135,31 +135,37 @@ func (c *roleController) UpdateRole(ctx *gin.Context) {
 func (c *roleController) DeleteRole(ctx *gin.Context) {
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
 	if *userCheck.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	} else {
 		idParam := ctx.Param("id")
 		id, err := strconv.Atoi(idParam)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
 			return
 		}
 		id64 := int64(id)
 		err = c.roleService.DeleteById(&id64)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, err)
+			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("can't delete role", err.Error(), nil))
 			return
 		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "Successfully delete role"})
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "Successfully delete role", id64))
 		return
 	}
 }
 
 func (c *roleController) CountRoles(ctx *gin.Context) {
-	count, err := c.roleService.Count()
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, err)
+	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if *userCheck.RoleId != 1 {
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
+	} else {
+		count, err := c.roleService.Count()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed to count role", err.Error(), nil))
+			return
+		}
+		ctx.JSON(http.StatusOK, count)
 	}
-	ctx.JSON(http.StatusOK, count)
 }

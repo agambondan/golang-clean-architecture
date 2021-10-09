@@ -20,8 +20,8 @@ type UserService interface {
 	FindAll(limit, offset int) (*[]model.User, error)
 	FindById(uuid *uuid.UUID) (*model.User, error)
 	FindByUsername(username string) (*model.User, error)
-	FindAllByRoleId(id int64) (*[]model.User, error)
-	FindUserByEmailAndPassword(user *model.User) (*model.User, error)
+	FindAllByRoleId(id int64, offset, limit int) (*[]model.User, error)
+	FindUserByEmailOrUsername(user *model.User) (*model.User, error)
 	UpdateById(uuid *uuid.UUID, user *model.User) (*model.User, error)
 	DeleteById(uuid *uuid.UUID) error
 	Count() (int64, error)
@@ -43,12 +43,12 @@ func (s *userService) FindByUsername(username string) (*model.User, error) {
 	return s.user.FindByUsername(username)
 }
 
-func (s *userService) FindAllByRoleId(id int64) (*[]model.User, error) {
-	return s.user.FindAllByRoleId(id)
+func (s *userService) FindAllByRoleId(id int64, offset, limit int) (*[]model.User, error) {
+	return s.user.FindAllByRoleId(id, offset, limit)
 }
 
-func (s *userService) FindUserByEmailAndPassword(user *model.User) (*model.User, error) {
-	return s.user.FindUserByEmailAndPassword(user)
+func (s *userService) FindUserByEmailOrUsername(user *model.User) (*model.User, error) {
+	return s.user.FindUserByEmailOrUsername(user)
 }
 
 func (s *userService) UpdateById(uuid *uuid.UUID, user *model.User) (*model.User, error) {

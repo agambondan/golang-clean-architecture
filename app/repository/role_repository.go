@@ -65,6 +65,6 @@ func (r *roleRepo) DeleteById(id *int64) error {
 
 func (r *roleRepo) Count() (*int64, error) {
 	var count int64
-	r.db.Model(&[]model.Role{}).Count(&count)
+	r.db.Table("role").Select("id").Count(&count)
 	return &count, nil
 }

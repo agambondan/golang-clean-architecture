@@ -8,25 +8,23 @@ import (
 type User struct {
 	BaseUUID
 	UserAPI
-	RoleId   *int64     `json:"role_id,omitempty"`
+	BaseImage
 	Articles *[]Article `json:"articles,omitempty" gorm:"foreignKey:UserID"`
 	Role     *Role      `json:"role,omitempty"`
 }
 
 type UserAPI struct {
-	FirstName    *string `json:"first_name,omitempty"`
-	LastName     *string `json:"last_name,omitempty"`
-	Email        *string `json:"email,omitempty"`
-	PhoneNumber  *string `json:"phone_number,omitempty"`
-	Username     *string `json:"username,omitempty"`
-	Password     *string `json:"password,omitempty"`
-	Instagram    *string `json:"instagram,omitempty"`
-	Facebook     *string `json:"facebook,omitempty"`
-	Twitter      *string `json:"twitter,omitempty"`
-	LinkedIn     *string `json:"linked_in,omitempty"`
-	Image        *string `json:"image,omitempty"`
-	ImageURL     *string `json:"image_url,omitempty"`
-	ThumbnailURL *string `json:"thumbnail_url,omitempty"`
+	FirstName   *string `json:"first_name,omitempty" gorm:"type:varchar(24);not null;"`
+	LastName    *string `json:"last_name,omitempty" gorm:"type:varchar(24);not null;"`
+	Email       *string `json:"email,omitempty" gorm:"type:varchar(64);not null;index:idx_email_deleted_at,unique,where:deleted_at is null"`
+	PhoneNumber *string `json:"phone_number,omitempty" gorm:"type:varchar(14);not null;index:idx_phone_number_deleted_at,unique,where:deleted_at is null"`
+	Username    *string `json:"username,omitempty" gorm:"type:varchar(36);not null;index:idx_username_deleted_at,unique,where:deleted_at is null"`
+	Password    *string `json:"password,omitempty" gorm:"type:varchar(256);not null;"`
+	Instagram   *string `json:"instagram,omitempty" gorm:"type:varchar(24);not null;"`
+	Facebook    *string `json:"facebook,omitempty" gorm:"type:varchar(24);not null;"`
+	Twitter     *string `json:"twitter,omitempty" gorm:"type:varchar(24);not null"`
+	LinkedIn    *string `json:"linked_in,omitempty" gorm:"type:varchar(24);not null"`
+	RoleId      *int64  `json:"role_id,omitempty" gorm:"type:smallint;not null;"`
 }
 
 type PublicUser struct {
@@ -44,7 +42,7 @@ type PublicUser struct {
 
 type Users []User
 
-// PublicUsers So that we dont expose the user's email address and password to the world
+// PublicUsers So that we don't expose the user's email address and password to the world
 func (users Users) PublicUsers() []interface{} {
 	result := make([]interface{}, len(users))
 	for index, user := range users {
@@ -53,23 +51,47 @@ func (users Users) PublicUsers() []interface{} {
 	return result
 }
 
-// PrivateUser So that we dont expose the user's email address and password to the world
+// PrivateUsers So that we don't expose the user's email address and password to the world
+func (users Users) PrivateUsers() []interface{} {
+	result := make([]interface{}, len(users))
+	for index, user := range users {
+		result[index] = user.PrivateUser()
+	}
+	return result
+}
+
+// PrivateUser So that we don't expose the user's email address and password to the world
 func (u *User) PrivateUser() interface{} {
-	return &PublicUser{
-		FirstName:    u.FirstName,
-		LastName:     u.LastName,
-		Username:     u.Username,
-		Instagram:    u.Instagram,
-		Facebook:     u.Facebook,
-		Twitter:      u.Twitter,
-		LinkedIn:     u.LinkedIn,
-		Image:        u.Image,
-		ImageURL:     u.ImageURL,
-		ThumbnailURL: u.ThumbnailURL,
+	return &User{
+		BaseUUID: BaseUUID{
+			ID: u.ID,
+			BaseDate: BaseDate{
+				CreatedAt: u.CreatedAt,
+				UpdatedAt: u.UpdatedAt,
+			},
+		},
+		UserAPI: UserAPI{
+			FirstName:   u.FirstName,
+			LastName:    u.LastName,
+			Email:       u.Email,
+			PhoneNumber: u.PhoneNumber,
+			Username:    u.Username,
+			Password:    u.Password,
+			Instagram:   u.Instagram,
+			Facebook:    u.Facebook,
+			Twitter:     u.Twitter,
+			LinkedIn:    u.LinkedIn,
+			RoleId:      u.RoleId,
+		},
+		BaseImage: BaseImage{
+			Image:        u.Image,
+			ImageURL:     u.ImageURL,
+			ThumbnailURL: u.ThumbnailURL,
+		},
 	}
 }
 
-// PublicUser So that we dont expose the user's email address and password to the world
+// PublicUser So that we don't expose the user's email address and password to the world
 func (u *User) PublicUser() interface{} {
 	return &PublicUser{
 		FirstName:    u.FirstName,
@@ -89,6 +111,12 @@ func (u *User) Validate(action string) map[string]string {
 	var errorMessages = make(map[string]string)
 	var err error
 	switch strings.ToLower(action) {
+	case "images":
+		if u.ImageURL != nil || u.ThumbnailURL != nil {
+			if *u.ImageURL == "" || len(*u.ImageURL) < 45 || *u.ThumbnailURL == "" {
+				errorMessages["image"] = "image url is required"
+			}
+		}
 	case "update":
 		if u.Email != nil {
 			if *u.Email == "" {

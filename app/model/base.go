@@ -22,6 +22,12 @@ type BaseDate struct {
 	DeletedAt gorm.DeletedAt `json:"-" gorm:"index" swaggerignore:"true"`
 }
 
+type BaseImage struct {
+	Image        *string    `json:"image,omitempty" gorm:"type:varchar(256)"`
+	ImageURL     *string    `json:"image_url,omitempty" gorm:"type:varchar(256)"`
+	ThumbnailURL *string    `json:"thumbnail,omitempty" gorm:"type:varchar(256)"`
+}
+
 func (b *BaseUUID) BeforeCreate(db *gorm.DB) error {
 	if b.ID == nil {
 		newUUID, _ := uuid.NewUUID()

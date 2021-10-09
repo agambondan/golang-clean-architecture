@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -10,10 +11,8 @@ import (
 	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"go-blog-api/app/utils"
-	"log"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type userController struct {
@@ -44,80 +43,55 @@ func (c *userController) SaveUser(ctx *gin.Context) {
 	var user model.User
 	var err error
 	contentType := ctx.ContentType()
+	var userAPI model.UserAPI
 	if contentType != "application/json" {
-		firstName := ctx.PostForm("first_name")
-		lastName := ctx.PostForm("last_name")
-		email := ctx.PostForm("email")
-		password := ctx.PostForm("password")
-		username := ctx.PostForm("username")
-		phoneNumber := ctx.PostForm("phone_number")
-		roleID, _ := strconv.ParseInt(ctx.PostForm("role_id"), 10, 64)
-		instagram := ctx.PostForm("instagram")
-		facebook := ctx.PostForm("facebook")
-		twitter := ctx.PostForm("twitter")
-		linkedIn := ctx.PostForm("linkedin")
-		user.FirstName = &firstName
-		user.LastName = &lastName
-		user.Email = &email
-		user.Password = &password
-		user.Username = &username
-		user.PhoneNumber = &phoneNumber
-		user.RoleId = &roleID
-		user.Instagram = &instagram
-		user.Facebook = &facebook
-		user.Twitter = &twitter
-		user.LinkedIn = &linkedIn
+		data := ctx.PostForm("data")
+		err = json.Unmarshal([]byte(data), &userAPI)
+		if err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
+			return
+		}
 	} else {
-		if err = ctx.ShouldBindJSON(&user); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": "invalid json",
-			})
+		if err = ctx.ShouldBindJSON(&userAPI); err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
 			return
 		}
 	}
+	_ = lib.Merge(userAPI, &user)
 	validate := user.Validate("")
 	if len(validate) != 0 {
-		ctx.JSON(http.StatusBadRequest, validate)
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
 		return
 	}
-	roleFindById, err := c.roleService.FindById(user.RoleId)
-	if err != nil || *roleFindById.Name == "" {
-		role := model.Role{}
-		roleName := "admin"
-		role.Name = &roleName
-		_, err = c.roleService.Create(&role)
-		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
-			return
-		}
-	}
-	roleFindById, err = c.roleService.FindById(user.RoleId)
+	_, err = c.roleService.FindById(user.RoleId)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Role not found"})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("role not found", err.Error(), nil))
 		return
 	}
 	_, err = c.userService.Create(&user)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, err)
+		ctx.JSON(http.StatusConflict, model.BuildErrorResponse("failed to create user", err.Error(), user))
 		return
 	}
-	uploadFile, err := utils.UploadImageFileToAssets(ctx, "user", user.ID.String(), utils.DriveImagesId)
-	if err != nil {
-		log.Println(err)
-		_ = c.userService.DeleteById(user.ID)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err, "message": err.Error()})
-		return
+	fileHeader, _ := ctx.FormFile("images")
+	if contentType != "application/json" && fileHeader.Filename != "" {
+		uploadFile, err := utils.UploadImageFileToAssets(ctx, "user", user.ID.String(), utils.DriveImagesId)
+		if err != nil {
+			_ = c.userService.DeleteById(user.ID)
+			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed upload image to google drive", "user failed to created", user))
+			return
+		}
+		user.Image = &uploadFile.Name
+		imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
+		user.ImageURL = &imageURL
+		user.ThumbnailURL = &uploadFile.ThumbnailLink
+		_, err = c.userService.UpdateById(user.ID, &user)
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed update image data", err.Error(), user))
+			return
+		}
 	}
-	user.Image = &uploadFile.Name
-	imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
-	user.ImageURL = &imageURL
-	user.ThumbnailURL = &uploadFile.ThumbnailLink
-	_, err = c.userService.UpdateById(user.ID, &user)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"data": user, "error": err})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"data": user, "filename": uploadFile.Name})
+	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user))
 }
 
 func (c *userController) GetUsers(ctx *gin.Context) {
@@ -125,22 +99,17 @@ func (c *userController) GetUsers(ctx *gin.Context) {
 	limit, offset := utils.GetLimitOffsetParam(ctx)
 	users, err := c.userService.FindAll(limit, offset)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("users not found", err.Error(), nil))
 		return
 	}
-	_ = lib.Merge(users, &usersType)
-	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if *userCheck.Role.Name == utils.RoleNameAdmin {
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
 		return
 	} else {
-		if *userCheck.Role.Name == utils.RoleNameAdmin {
-			ctx.JSON(http.StatusOK, users)
-			return
-		} else {
-			ctx.JSON(http.StatusOK, usersType.PublicUsers())
-			return
-		}
+		_ = lib.Merge(users, &usersType)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", usersType.PublicUsers()))
+		return
 	}
 }
 
@@ -149,23 +118,18 @@ func (c *userController) GetUser(ctx *gin.Context) {
 	uuidParam := uuid.MustParse(idParam)
 	user, err := c.userService.FindById(&uuidParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("user not found", err.Error(), user))
 		return
 	}
-	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if *userCheck.Role.Name == utils.RoleNameAdmin || *userCheck.ID == uuidParam {
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user))
 		return
 	} else {
-		if *userCheck.Role.Name == utils.RoleNameAdmin || *userCheck.ID == uuidParam {
-			ctx.JSON(http.StatusOK, user)
-			return
-		} else {
-			ctx.JSON(http.StatusOK, user.PublicUser())
-			//ctx.JSON(http.StatusOK, gin.H{"message": "unauthorized"})
-			return
-		}
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user.PublicUser()))
+		return
 	}
+
 }
 
 func (c *userController) GetUsersByRoleId(ctx *gin.Context) {
@@ -173,27 +137,23 @@ func (c *userController) GetUsersByRoleId(ctx *gin.Context) {
 	idParam := ctx.Param("role_id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("role id must number", err.Error(), nil))
 		return
 	}
-	users, err := c.userService.FindAllByRoleId(int64(id))
+	limit, offset := utils.GetLimitOffsetParam(ctx)
+	users, err := c.userService.FindAllByRoleId(int64(id), offset, limit)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse(fmt.Sprintf("users with role id %d not found", id), err.Error(), nil))
 		return
 	}
-	_ = lib.Merge(users, &usersType)
-	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if *userCheck.Role.Name == utils.RoleNameAdmin {
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
 		return
 	} else {
-		if *userCheck.Role.Name == utils.RoleNameAdmin {
-			ctx.JSON(http.StatusOK, users)
-			return
-		} else {
-			ctx.JSON(http.StatusOK, usersType.PublicUsers())
-			return
-		}
+		_ = lib.Merge(users, &usersType)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", usersType.PublicUsers()))
+		return
 	}
 }
 
@@ -201,89 +161,63 @@ func (c *userController) GetUserByUsername(ctx *gin.Context) {
 	username := ctx.Param("username")
 	findUserByUsername, err := c.userService.FindByUsername(username)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse(fmt.Sprintf("user with username %s not found", username), err.Error(), nil))
 		return
 	}
-	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
+	if *userCheck.Role.Name == utils.RoleNameAdmin {
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", findUserByUsername))
 		return
 	} else {
-		if *userCheck.Role.Name == utils.RoleNameAdmin {
-			ctx.JSON(http.StatusOK, findUserByUsername)
-			return
-		} else {
-			ctx.JSON(http.StatusOK, findUserByUsername.PublicUser())
-			return
-		}
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", findUserByUsername.PublicUser()))
+		return
 	}
 }
 
 func (c *userController) UpdateUser(ctx *gin.Context) {
-	var filenames []string
 	var user model.User
+	var userAPI model.UserAPI
 	idParam := ctx.Param("id")
 	uuidParam := uuid.MustParse(idParam)
 	checkIdUser, err := utils.CheckIdUser(c.auth, c.redis, c.userService, ctx)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, err)
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), checkIdUser))
 		return
 	}
-	if *checkIdUser.ID != uuidParam || *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
+	if *checkIdUser.ID != uuidParam && *checkIdUser.RoleId != 1 {
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("can't update data, your id not equals", err.Error(), checkIdUser))
 		return
-	} else {
-		contentType := ctx.ContentType()
-		if contentType != "application/json" {
-			firstName := ctx.PostForm("first_name")
-			lastName := ctx.PostForm("last_name")
-			email := ctx.PostForm("email")
-			password := ctx.PostForm("password")
-			username := ctx.PostForm("username")
-			phoneNumber := ctx.PostForm("phone_number")
-			roleID, _ := strconv.ParseInt(ctx.PostForm("role_id"), 10, 64)
-			instagram := ctx.PostForm("instagram")
-			facebook := ctx.PostForm("facebook")
-			twitter := ctx.PostForm("twitter")
-			linkedIn := ctx.PostForm("linkedin")
-			user.FirstName = &firstName
-			user.LastName = &lastName
-			user.Email = &email
-			user.Password = &password
-			user.Username = &username
-			user.PhoneNumber = &phoneNumber
-			user.RoleId = &roleID
-			user.Instagram = &instagram
-			user.Facebook = &facebook
-			user.Twitter = &twitter
-			user.LinkedIn = &linkedIn
-		} else {
-			if err = ctx.ShouldBindJSON(&user); err != nil {
-				ctx.JSON(http.StatusUnprocessableEntity, gin.H{
-					"error": "invalid json",
-				})
-				return
-			}
-		}
-		validate := user.Validate("update")
-		if len(validate) != 0 {
-			ctx.JSON(http.StatusBadRequest, validate)
-			return
-		}
-		user.ID = checkIdUser.ID
-		if contentType != "application/json" {
-			filenames, err = utils.CreateUploadPhotoMachine(ctx, user.ID.String(), "/user")
-			image := strings.Join(filenames, "")
-			user.Image = &image
-		}
-		userUpdateById, err := c.userService.UpdateById(&uuidParam, &user)
+	}
+	contentType := ctx.ContentType()
+	if contentType != "application/json" {
+		data := ctx.PostForm("data")
+		err = json.Unmarshal([]byte(data), &userAPI)
 		if err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, err)
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
 			return
 		}
-		userUpdateById.CreatedAt = checkIdUser.CreatedAt
-		ctx.JSON(http.StatusOK, gin.H{"data": userUpdateById, "filenames": filenames})
+	} else {
+		if err = ctx.ShouldBindJSON(&userAPI); err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
+			return
+		}
 	}
+	_ = lib.Merge(userAPI, &user)
+	validate := user.Validate("update")
+	if len(validate) != 0 {
+		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
+		return
+	}
+	_, err = c.userService.UpdateById(&uuidParam, &user)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("can't update user", err.Error(), user))
+		return
+	}
+	fileHeader, _ := ctx.FormFile("images")
+	if contentType != "application/json" && fileHeader.Filename != "" {
+
+	}
+	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user))
 }
 
 func (c *userController) DeleteUser(ctx *gin.Context) {
@@ -291,27 +225,27 @@ func (c *userController) DeleteUser(ctx *gin.Context) {
 	uuidParam := uuid.MustParse(idParam)
 	checkIdUser, err := utils.CheckIdUser(c.auth, c.redis, c.userService, ctx)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, err)
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), checkIdUser))
 		return
 	}
 	if *checkIdUser.ID != uuidParam && *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "can't update data, your id not equals"})
+		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("can't update data, your id not equals", err.Error(), checkIdUser))
 		return
 	} else {
-		err := c.userService.DeleteById(&uuidParam)
+		err = c.userService.DeleteById(&uuidParam)
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, err)
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id not found", err.Error(), uuidParam))
 			return
 		}
-		ctx.JSON(http.StatusOK, gin.H{"message": "Delete User Successfully"})
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", nil))
 	}
 }
 
 func (c *userController) CountUsers(ctx *gin.Context) {
 	count, err := c.userService.Count()
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, err)
+		ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed to count user", err.Error(), nil))
 		return
 	}
-	ctx.JSON(http.StatusOK, count)
+	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", count))
 }
