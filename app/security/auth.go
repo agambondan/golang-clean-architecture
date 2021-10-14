@@ -59,7 +59,7 @@ func (tk *ClientData) CreateAuth(userid uuid.UUID, td *TokenDetails) error {
 	return nil
 }
 
-// FetchAuth Check the metadata saved
+// FetchAuth Verify the metadata saved
 func (tk *ClientData) FetchAuth(tokenUuid string) (uuid.UUID, error) {
 	userid, err := tk.client.Get(tokenUuid).Result()
 	userUUID, err := uuid.Parse(userid)

@@ -24,7 +24,8 @@ type LoginController interface {
 	Login(c *gin.Context)
 	Logout(c *gin.Context)
 	Refresh(c *gin.Context)
-	Check(c *gin.Context)
+	Verify(c *gin.Context)
+	VerifyRole(c *gin.Context)
 }
 
 func NewLoginController(repo *repository.Repositories, redis security.Interface, auth security.TokenInterface) LoginController {
@@ -53,7 +54,7 @@ func (l *loginController) Login(c *gin.Context) {
 	}
 	u, userErr := l.userService.FindUserByEmailOrUsername(user)
 	if userErr != nil {
-		c.JSON(http.StatusInternalServerError, model.BuildErrorResponse("user not found", userErr.Error(), u))
+		c.JSON(http.StatusNotFound, model.BuildErrorResponse("user not found", userErr.Error(), u))
 		return
 	}
 	cipherDecrypt, err := lib.CipherDecrypt(cipherEncrypt, []byte(os.Getenv("CIPHER_KEY")))
@@ -164,11 +165,25 @@ func (l *loginController) Refresh(c *gin.Context) {
 	}
 }
 
-func (l *loginController) Check(c *gin.Context) {
+func (l *loginController) Verify(c *gin.Context) {
 	_, err := l.auth.ExtractTokenMetadata(c.Request)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
 		return
 	}
 	c.JSON(http.StatusOK, model.BuildResponse(true, "success", nil))
+}
+
+func (l *loginController) VerifyRole(c *gin.Context) {
+	accessDetails, err := l.auth.ExtractTokenMetadata(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
+		return
+	}
+	findById, err := l.userService.FindById(&accessDetails.UserUUID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, model.BuildErrorResponse("user not found", err.Error(), nil))
+		return
+	}
+	c.JSON(http.StatusOK, model.BuildResponse(true, "success", findById.Role.Name))
 }

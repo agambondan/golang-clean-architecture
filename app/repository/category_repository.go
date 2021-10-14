@@ -57,6 +57,7 @@ func (c *categoryRepo) UpdateById(id int64, category *model.Category) (*model.Ca
 	if err != nil {
 		return findById, err
 	}
+	category.ID = &id
 	if tx := c.db.Updates(&category); tx.Error != nil {
 		return category, tx.Error
 	}

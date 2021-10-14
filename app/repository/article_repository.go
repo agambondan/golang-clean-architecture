@@ -32,36 +32,20 @@ func (a *articleRepo) Save(article *model.Article) (*model.Article, error) {
 	if tx := a.db.Create(&article); tx.Error != nil {
 		return article, tx.Error
 	}
-	if err := a.db.Model(&article).Association("Category").Append(&article.Categories); err != nil {
-		return article, err
-	}
 	return article, nil
 }
 
 func (a *articleRepo) FindAll(limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.
-		Find(&articles).Select("*").Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Category").Find(&articles).Offset(offset).Limit(limit); tx.Error != nil {
 		return articles, tx.Error
-	}
-	for i, article := range *articles {
-		var categories *[]model.Category
-		err := a.db.Model(&article).Select("category.name").Association("Categories").Find(&categories)
-		if err != nil {
-			return articles, err
-		}
-		(*articles)[i].Categories = categories
 	}
 	return articles, nil
 }
 
 func (a *articleRepo) FindById(id int64) (*model.Article, error) {
 	var article *model.Article
-	if tx := a.db.Model(&model.Article{}).Joins("join \"user\" u on article.user_id = u.id").
-		Joins("join article_categories a_c on article.id = a_c.article_id").
-		Joins("join category c on a_c.category_id = c.id").
-		Preload("Categories").
-		First(&article, id); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Category").First(&article, id); tx.Error != nil {
 		return article, tx.Error
 	}
 	return article, nil
@@ -69,13 +53,7 @@ func (a *articleRepo) FindById(id int64) (*model.Article, error) {
 
 func (a *articleRepo) FindByTitle(title string) (*model.Article, error) {
 	var article *model.Article
-	if tx := a.db.
-		//Model(&model.Article{}).
-		//Joins("join user u on article.user_id = u.id").
-		//Joins("join article_categories a_c on article.id = a_c.article_id").
-		//Joins("join category c on a_c.category_id = c.id").
-		Preload("Categories").
-		First(&article, "article.title = ?", title); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Category").First(&article, "article.title = ?", title); tx.Error != nil {
 		return article, tx.Error
 	}
 	return article, nil
@@ -83,13 +61,7 @@ func (a *articleRepo) FindByTitle(title string) (*model.Article, error) {
 
 func (a *articleRepo) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.
-		//Model(&model.Article{}).
-		//Joins("join user u on article.user_id = u.id").
-		//Joins("join article_categories a_c on article.id = a_c.article_id").
-		//Joins("join category c on a_c.category_id = c.id").
-		Preload("Categories").
-		Find(&articles, "article.user_id = ?", uuid).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Category").Find(&articles, "article.user_id = ?", uuid).Offset(offset).Limit(limit); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -97,13 +69,7 @@ func (a *articleRepo) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]mod
 
 func (a *articleRepo) FindAllByUsername(username string, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.
-		//Model(&model.Article{}).
-		//Joins("join user u on article.user_id = u.id").
-		//Joins("join article_categories a_c on article.id = a_c.article_id").
-		//Joins("join category c on a_c.category_id = c.id").
-		Preload("Categories").
-		Find(&articles, "u.username = ?", username).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Category").Find(&articles, "u.username = ?", username).Offset(offset).Limit(limit); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -111,14 +77,8 @@ func (a *articleRepo) FindAllByUsername(username string, limit, offset int) (*[]
 
 func (a *articleRepo) FindAllByCategoryName(name string, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.
-		//Model(&model.Article{}).
-		//Joins("join user u on article.user_id = u.id").
-		//Joins("join article_categories a_c on article.id = a_c.article_id").
-		//Joins("join category c on a_c.category_id = c.id").
-		Preload("Categories").
-		Preload("Category").
-		Find(&articles, "c.name = ?", name).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("Category").Preload("User").Joins("join article_categories a_c on article.id = a_c.article_id").
+		Joins("join category c on a_c.category_id = c.id").Limit(limit).Offset(offset).Find(&articles, "c.name = ?", &name); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -127,7 +87,7 @@ func (a *articleRepo) FindAllByCategoryName(name string, limit, offset int) (*[]
 func (a *articleRepo) CountByCategoryName(name string) (int64, error) {
 	var count int64
 	if tx := a.db.Model(&[]model.Article{}).Joins("join article_categories a_c on article.id = a_c.article_id").
-		Joins("join category c on a_c.category_id = c.id").Count(&count); tx.Error != nil {
+		Joins("join category c on a_c.category_id = c.id").Select("count(article.id)").Count(&count); tx.Error != nil {
 		return count, tx.Error
 	}
 	return count, nil

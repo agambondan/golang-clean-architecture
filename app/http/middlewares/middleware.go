@@ -3,6 +3,7 @@ package middlewares
 import (
 	"bytes"
 	"github.com/gin-gonic/gin"
+	"go-blog-api/app/model"
 	"go-blog-api/app/security"
 	"io/ioutil"
 	"net/http"
@@ -12,10 +13,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		err := security.TokenValid(c.Request)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"status": http.StatusUnauthorized,
-				"error":  err.Error(),
-			})
+			c.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
 			c.Abort()
 			return
 		}

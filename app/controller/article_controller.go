@@ -50,17 +50,16 @@ func (p *articleController) SaveArticle(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	categoriesFormArray := ctx.PostFormArray("categories")
-	var categories = make([]model.Category, len(categoriesFormArray))
-	for i, value := range categoriesFormArray {
-		categoryIDString, _ := strconv.Atoi(value)
-		categoryID := int64(categoryIDString)
-		categories[i].ID = &categoryID
-	}
-	article.Categories = &categories
 	contentType := ctx.ContentType()
 	if contentType != "application/json" {
+		var articleCategories *model.Article
 		data := ctx.PostForm("data")
+		err = json.Unmarshal([]byte(data), &articleCategories)
+		if err != nil {
+			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
+			return
+		}
+		article.Category = articleCategories.Category
 		err = json.Unmarshal([]byte(data), &articleAPI)
 		if err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
@@ -114,10 +113,12 @@ func (p *articleController) GetArticles(ctx *gin.Context) {
 	var articlesType *model.Articles
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	_ = lib.Merge(articles, &articlesType)
-	if *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -139,11 +140,13 @@ func (p *articleController) GetArticle(ctx *gin.Context) {
 		return
 	}
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
-	article.Author = userFindById
-	if *checkIdUser.RoleId != 1 || article.UserID != checkIdUser.ID {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
+	article.User = userFindById
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 || article.UserID == checkIdUser.ID {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
 	}
 }
 
@@ -160,10 +163,12 @@ func (p *articleController) GetArticleByTitle(ctx *gin.Context) {
 		return
 	}
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
-	if *checkIdUser.RoleId != 1 || article.UserID != checkIdUser.ID {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 || article.UserID == checkIdUser.ID {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
 	}
 }
 
@@ -179,10 +184,12 @@ func (p *articleController) GetArticlesByUserId(ctx *gin.Context) {
 	var articlesType *model.Articles
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	_ = lib.Merge(articles, &articlesType)
-	if *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -197,10 +204,12 @@ func (p *articleController) GetArticlesByUsername(ctx *gin.Context) {
 	var articlesType *model.Articles
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	_ = lib.Merge(articles, &articlesType)
-	if *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -215,10 +224,12 @@ func (p *articleController) GetArticlesByCategoryName(ctx *gin.Context) {
 	var articlesType *model.Articles
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	_ = lib.Merge(articles, &articlesType)
-	if *checkIdUser.RoleId != 1 {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 

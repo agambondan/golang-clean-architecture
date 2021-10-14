@@ -13,6 +13,7 @@ type UserRepository interface {
 	Save(user *model.User) (*model.User, error)
 	FindAll(limit, offset int) (*[]model.User, error)
 	FindById(uuid *uuid.UUID) (*model.User, error)
+	FindAllByUsername(username string) (*[]model.User, error)
 	FindByUsername(username string) (*model.User, error)
 	FindAllByRoleId(id int64, offset, limit int) (*[]model.User, error)
 	FindUserByEmailOrUsername(user *model.User) (*model.User, error)
@@ -52,7 +53,15 @@ func (u *userRepo) FindAll(limit, offset int) (*[]model.User, error) {
 
 func (u *userRepo) FindById(uuid *uuid.UUID) (*model.User, error) {
 	var user *model.User
-	if tx := u.db.First(&user, uuid); tx.Error != nil {
+	if tx := u.db.Preload("Role").First(&user, uuid); tx.Error != nil {
+		return user, tx.Error
+	}
+	return user, nil
+}
+
+func (u *userRepo) FindAllByUsername(username string) (*[]model.User, error) {
+	var user *[]model.User
+	if tx := u.db.Preload("Role").Find(&user, fmt.Sprint("username like '%"+username+"%'")); tx.Error != nil {
 		return user, tx.Error
 	}
 	return user, nil
@@ -60,7 +69,7 @@ func (u *userRepo) FindById(uuid *uuid.UUID) (*model.User, error) {
 
 func (u *userRepo) FindByUsername(username string) (*model.User, error) {
 	var user *model.User
-	if tx := u.db.First(&user, "username = ?", username); tx.Error != nil {
+	if tx := u.db.Preload("Role").First(&user, "username = ?", username); tx.Error != nil {
 		return user, tx.Error
 	}
 	return user, nil
@@ -83,11 +92,17 @@ func (u *userRepo) FindUserByEmailOrUsername(userToken *model.User) (*model.User
 }
 
 func (u *userRepo) UpdateById(uuid *uuid.UUID, user *model.User) (*model.User, error) {
-	findById, err := u.FindById(uuid)
+	cipherEncrypt, err := lib.CipherEncrypt([]byte(*user.Password), []byte(os.Getenv("CIPHER_KEY")))
 	if err != nil {
-		return findById, err
+		return user, err
 	}
-	_ = lib.Merge(findById, &user)
+	cipherEncryptString := fmt.Sprintf("%x", cipherEncrypt)
+	user.Password = &cipherEncryptString
+	_, err = u.FindById(uuid)
+	if err != nil {
+		return user, err
+	}
+	user.ID = uuid
 	if tx := u.db.Updates(&user); tx.Error != nil {
 		return user, tx.Error
 	}

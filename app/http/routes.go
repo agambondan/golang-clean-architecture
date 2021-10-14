@@ -34,6 +34,7 @@ func (server *Server) routes(repositories *repository.Repositories) {
 
 	routes := server.Router
 
+	//public := routes.Group("/api/v1")
 	//Home Routing
 	routes.GET("/", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{"message": "Hello World"})
@@ -46,16 +47,19 @@ func (server *Server) routes(repositories *repository.Repositories) {
 
 	// Auth Login API
 	routes.POST("/login", middlewares.CORSMiddleware(), newLoginController.Login)
-	routes.POST("/logout", middlewares.CORSMiddleware(), middlewares.AuthMiddleware(), newLoginController.Logout)
+	routes.POST("/logout", middlewares.CORSMiddleware(), newLoginController.Logout)
 	routes.POST("/refresh", middlewares.AuthMiddleware(), newLoginController.Refresh)
-	routes.GET("/check", middlewares.CORSMiddleware(), middlewares.AuthMiddleware(), newLoginController.Check)
+	routes.GET("/verify", middlewares.CORSMiddleware(), newLoginController.Verify)
+	routes.GET("/verify/role", middlewares.CORSMiddleware(), newLoginController.VerifyRole)
+
+	// Google Drive API
 
 	// Images API
-	routes.GET("/images/:uuid", newImageController.GetImages)
-	routes.GET("/images/:uuid/:id", newImageController.GetImages)
-	routes.GET("/images/user/:username", newImageController.GetImagesByUsername)
-	routes.GET("/images/post/:title", newImageController.GetImagesByArticleTitle)
-	routes.GET("/images/category/:name", newImageController.GetImagesByCategoryName)
+	routes.GET("/images/:uuid", middlewares.CORSMiddleware(), newImageController.GetImages)
+	routes.GET("/images/:uuid/:id", middlewares.CORSMiddleware(), newImageController.GetImages)
+	routes.GET("/images/user/:username", middlewares.CORSMiddleware(), newImageController.GetImagesByUsername)
+	routes.GET("/images/articles/:title", middlewares.CORSMiddleware(), newImageController.GetImagesByArticleTitle)
+	routes.GET("/images/categories/:name", middlewares.CORSMiddleware(), newImageController.GetImagesByCategoryName)
 	//routes.GET("/camera", broadcast)
 
 	// Role API
@@ -71,34 +75,35 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/users", middlewares.CORSMiddleware(), newUserController.GetUsers)
 	routes.GET("/users/:id", middlewares.CORSMiddleware(), newUserController.GetUser)
 	routes.GET("/users/role/:role_id", middlewares.CORSMiddleware(), newUserController.GetUsersByRoleId)
-	routes.PUT("/user/:id", middlewares.CORSMiddleware(), newUserController.UpdateUser)
+	routes.PUT("/users/:id", middlewares.CORSMiddleware(), newUserController.UpdateUser)
 	routes.DELETE("/users/:id", middlewares.CORSMiddleware(), newUserController.DeleteUser)
 	routes.GET("/users/count", middlewares.CORSMiddleware(), newUserController.CountUsers)
+	routes.GET("/users/username/:username", middlewares.CORSMiddleware(), newUserController.GetUserByUsername)
 
 	// Category API
-	routes.POST("/category", newCategoryController.SaveCategory)
-	routes.GET("/categories", newCategoryController.GetCategories)
-	routes.GET("/category/:id", newCategoryController.GetCategory)
-	routes.PUT("/category/:id", newCategoryController.UpdateCategory)
-	routes.DELETE("/category/:id", newCategoryController.DeleteCategory)
-	routes.GET("/categories/count", newCategoryController.CountCategories)
+	routes.POST("/categories", middlewares.CORSMiddleware(), newCategoryController.SaveCategory)
+	routes.GET("/categories", middlewares.CORSMiddleware(), newCategoryController.GetCategories)
+	routes.GET("/categories/:id", middlewares.CORSMiddleware(), newCategoryController.GetCategory)
+	routes.PUT("/categories/:id", middlewares.CORSMiddleware(), newCategoryController.UpdateCategory)
+	routes.DELETE("/categories/:id", middlewares.CORSMiddleware(), newCategoryController.DeleteCategory)
+	routes.GET("/categories/count", middlewares.CORSMiddleware(), newCategoryController.CountCategories)
 
 	// Article API
-	routes.POST("/posts", middlewares.CORSMiddleware(), newArticleController.SaveArticle)
-	routes.GET("/posts", newArticleController.GetArticles)
-	routes.GET("/post/:id", newArticleController.GetArticle)
-	routes.GET("/posts/uuid/:id", newArticleController.GetArticlesByUserId)
-	routes.GET("/posts/username/:username", newArticleController.GetArticlesByUsername)
-	routes.GET("/posts/category/:name", newArticleController.GetArticlesByCategoryName)
-	routes.GET("/posts/category/:name/count", newArticleController.GetCountArticlesByCategoryName)
-	routes.PUT("/posts/:id", newArticleController.UpdateArticle)
-	routes.DELETE("/posts/:id", newArticleController.DeleteArticle)
-	routes.GET("/posts/count", newArticleController.CountArticles)
+	routes.POST("/articles", middlewares.CORSMiddleware(), middlewares.CORSMiddleware(), newArticleController.SaveArticle)
+	routes.GET("/articles", middlewares.CORSMiddleware(), newArticleController.GetArticles)
+	routes.GET("/articles/:id", middlewares.CORSMiddleware(), newArticleController.GetArticle)
+	routes.GET("/articles/uuid/:id", middlewares.CORSMiddleware(), newArticleController.GetArticlesByUserId)
+	routes.GET("/articles/username/:username", middlewares.CORSMiddleware(), newArticleController.GetArticlesByUsername)
+	routes.GET("/articles/categories/:name", middlewares.CORSMiddleware(), newArticleController.GetArticlesByCategoryName)
+	routes.GET("/articles/categories/:name/count", middlewares.CORSMiddleware(), newArticleController.GetCountArticlesByCategoryName)
+	routes.PUT("/articles/:id", middlewares.CORSMiddleware(), newArticleController.UpdateArticle)
+	routes.DELETE("/articles/:id", middlewares.CORSMiddleware(), newArticleController.DeleteArticle)
+	routes.GET("/articles/count", middlewares.CORSMiddleware(), newArticleController.CountArticles)
 
 	// Slug API
-	routes.GET("/slug/user/:username", newUserController.GetUserByUsername)
-	routes.GET("/slug/category/:name", newCategoryController.GetCategoryByName)
-	routes.GET("/slug/post/:title", newArticleController.GetArticleByTitle)
+	routes.GET("/slug/user/:username", middlewares.CORSMiddleware(), newUserController.GetUserByUsername)
+	routes.GET("/slug/categories/:name", middlewares.CORSMiddleware(), newCategoryController.GetCategoryByName)
+	routes.GET("/slug/articles/:title", middlewares.CORSMiddleware(), newArticleController.GetArticleByTitle)
 }
 
 func googleLogin(ctx *gin.Context) {

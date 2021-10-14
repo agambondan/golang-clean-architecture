@@ -41,50 +41,56 @@ func NewCategoryController(repo *repository.Repositories, redis security.Interfa
 
 func (c *categoryController) SaveCategory(ctx *gin.Context) {
 	userCheck, err := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if *userCheck.RoleId != 1 {
+	if userCheck != nil {
+		if *userCheck.RoleId != 1 {
+			ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
+			return
+		}
+		var category model.Category
+		var categoryAPI model.CategoryAPI
+		contentType := ctx.ContentType()
+		if contentType != "application/json" {
+			data := ctx.PostForm("data")
+			err = json.Unmarshal([]byte(data), &categoryAPI)
+			if err != nil {
+				ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
+				return
+			}
+		} else {
+			if err = ctx.ShouldBindJSON(&category); err != nil {
+				ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
+				return
+			}
+		}
+		_ = lib.Merge(categoryAPI, &category)
+		validate := category.Validate("")
+		if len(validate) != 0 {
+			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
+			return
+		}
+		_, err = c.categoryService.Create(&category)
+		if err != nil {
+			ctx.JSON(http.StatusConflict, model.BuildErrorResponse("failed create category", err.Error(), nil))
+			return
+		}
+		fileHeader, _ := ctx.FormFile("images")
+		if contentType != "application/json" && fileHeader.Filename != "" {
+			uploadFile, err := utils.UploadImageFileToAssets(ctx, "categories", "", utils.DriveCategoriesId)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed upload image to google drive", "user failed to created", category))
+				return
+			}
+			category.Image = &uploadFile.Name
+			imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
+			category.ImageURL = &imageURL
+			category.ThumbnailURL = &uploadFile.ThumbnailLink
+		}
+		c.categoryService.UpdateById(*category.ID, &category)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", category))
+	} else {
 		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), userCheck))
 		return
 	}
-	var category model.Category
-	var categoryAPI model.CategoryAPI
-	contentType := ctx.ContentType()
-	if contentType != "application/json" {
-		data := ctx.PostForm("data")
-		err = json.Unmarshal([]byte(data), &categoryAPI)
-		if err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
-	} else {
-		if err = ctx.ShouldBindJSON(&category); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
-	}
-	_ = lib.Merge(categoryAPI, &category)
-	validate := category.Validate("")
-	if len(validate) != 0 {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
-		return
-	}
-	fileHeader, _ := ctx.FormFile("images")
-	if contentType != "application/json" && fileHeader.Filename != "" {
-		uploadFile, err := utils.UploadImageFileToAssets(ctx, "categories", "", utils.DriveCategoriesId)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed upload image to google drive", "user failed to created", category))
-			return
-		}
-		category.Image = &uploadFile.Name
-		imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
-		category.ImageURL = &imageURL
-		category.ThumbnailURL = &uploadFile.ThumbnailLink
-	}
-	_, err = c.categoryService.Create(&category)
-	if err != nil {
-		ctx.JSON(http.StatusConflict, model.BuildErrorResponse("failed create category", err.Error(), nil))
-		return
-	}
-	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", category))
 }
 
 func (c *categoryController) GetCategories(ctx *gin.Context) {

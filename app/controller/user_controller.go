@@ -103,9 +103,11 @@ func (c *userController) GetUsers(ctx *gin.Context) {
 		return
 	}
 	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if *userCheck.Role.Name == utils.RoleNameAdmin {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
-		return
+	if userCheck != nil {
+		if *userCheck.Role.Name == utils.RoleNameAdmin {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
+			return
+		}
 	} else {
 		_ = lib.Merge(users, &usersType)
 		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", usersType.PublicUsers()))
@@ -122,9 +124,11 @@ func (c *userController) GetUser(ctx *gin.Context) {
 		return
 	}
 	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if *userCheck.Role.Name == utils.RoleNameAdmin || *userCheck.ID == uuidParam {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user))
-		return
+	if userCheck != nil {
+		if *userCheck.Role.Name == utils.RoleNameAdmin || *userCheck.ID == uuidParam {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user))
+			return
+		}
 	} else {
 		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", user.PublicUser()))
 		return
@@ -147,9 +151,11 @@ func (c *userController) GetUsersByRoleId(ctx *gin.Context) {
 		return
 	}
 	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if *userCheck.Role.Name == utils.RoleNameAdmin {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
-		return
+	if userCheck != nil {
+		if *userCheck.Role.Name == utils.RoleNameAdmin {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", users))
+			return
+		}
 	} else {
 		_ = lib.Merge(users, &usersType)
 		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", usersType.PublicUsers()))
@@ -158,18 +164,22 @@ func (c *userController) GetUsersByRoleId(ctx *gin.Context) {
 }
 
 func (c *userController) GetUserByUsername(ctx *gin.Context) {
+	var usersType *model.Users
 	username := ctx.Param("username")
-	findUserByUsername, err := c.userService.FindByUsername(username)
+	findUserByUsername, err := c.userService.FindAllByUsername(username)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse(fmt.Sprintf("user with username %s not found", username), err.Error(), nil))
 		return
 	}
 	userCheck, _ := utils.AdminAuthMiddleware(c.auth, c.redis, c.userService, c.roleService, ctx, "admin")
-	if *userCheck.Role.Name == utils.RoleNameAdmin {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", findUserByUsername))
-		return
+	if userCheck != nil {
+		if *userCheck.Role.Name == utils.RoleNameAdmin {
+			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", findUserByUsername))
+			return
+		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", findUserByUsername.PublicUser()))
+		_ = lib.Merge(findUserByUsername, &usersType)
+		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", usersType.PublicUsers()))
 		return
 	}
 }
@@ -191,6 +201,7 @@ func (c *userController) UpdateUser(ctx *gin.Context) {
 	contentType := ctx.ContentType()
 	if contentType != "application/json" {
 		data := ctx.PostForm("data")
+		fmt.Println(data)
 		err = json.Unmarshal([]byte(data), &userAPI)
 		if err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))

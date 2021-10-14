@@ -11,8 +11,8 @@ type Article struct {
 	ArticleAPI
 	BaseImage
 	UserID     *uuid.UUID  `json:"user_id,omitempty"`
-	Author     *User       `json:"author,omitempty" gorm:"-"`
-	Categories *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
+	User     *User       `json:"author,omitempty"`
+	Category *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
 }
 
 type ArticleAPI struct {
@@ -21,22 +21,23 @@ type ArticleAPI struct {
 }
 
 type PublicArticle struct {
-	Title        *string    `json:"title,omitempty"`
-	Description  *string    `json:"description,omitempty"`
-	Image        *string    `json:"image,omitempty"`
-	ImageURL     *string    `json:"image_url,omitempty"`
-	ThumbnailURL *string    `json:"thumbnail_url,omitempty"`
-	FirstName    *string    `json:"first_name,omitempty"`
-	LastName     *string    `json:"last_name,omitempty"`
-	UserImage    *string    `json:"user_image,omitempty"`
-	UserImageURL *string    `json:"user_image_url,omitempty"`
-	Username     *string    `json:"username,omitempty"`
-	Instagram    *string    `json:"instagram,omitempty"`
-	Facebook     *string    `json:"facebook,omitempty"`
-	Twitter      *string    `json:"twitter,omitempty"`
-	LinkedIn     *string    `json:"linked_in,omitempty"`
-	CreatedAt    *time.Time `json:"created_at,omitempty"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
+	Title        *string     `json:"title,omitempty"`
+	Description  *string     `json:"description,omitempty"`
+	Image        *string     `json:"image,omitempty"`
+	ImageURL     *string     `json:"image_url,omitempty"`
+	ThumbnailURL *string     `json:"thumbnail_url,omitempty"`
+	FirstName    *string     `json:"first_name,omitempty"`
+	LastName     *string     `json:"last_name,omitempty"`
+	UserImage    *string     `json:"user_image,omitempty"`
+	UserImageURL *string     `json:"user_image_url,omitempty"`
+	Username     *string     `json:"username,omitempty"`
+	Instagram    *string     `json:"instagram,omitempty"`
+	Facebook     *string     `json:"facebook,omitempty"`
+	Twitter      *string     `json:"twitter,omitempty"`
+	LinkedIn     *string     `json:"linked_in,omitempty"`
+	CreatedAt    *time.Time  `json:"created_at,omitempty"`
+	UpdatedAt    *time.Time  `json:"updated_at,omitempty"`
+	Categories   *[]Category `json:"categories,omitempty"`
 }
 
 type Articles []Article
@@ -57,17 +58,18 @@ func (p *Article) PublicArticle() interface{} {
 		Image:        p.Image,
 		ImageURL:     p.ImageURL,
 		ThumbnailURL: p.ThumbnailURL,
-		FirstName:    p.Author.FirstName,
-		LastName:     p.Author.LastName,
-		Username:     p.Author.Username,
-		UserImage:    p.Author.Image,
-		UserImageURL: p.Author.ImageURL,
-		Instagram:    p.Author.Instagram,
-		Facebook:     p.Author.Facebook,
-		Twitter:      p.Author.Twitter,
-		LinkedIn:     p.Author.LinkedIn,
+		FirstName:    p.User.FirstName,
+		LastName:     p.User.LastName,
+		Username:     p.User.Username,
+		UserImage:    p.User.Image,
+		UserImageURL: p.User.ImageURL,
+		Instagram:    p.User.Instagram,
+		Facebook:     p.User.Facebook,
+		Twitter:      p.User.Twitter,
+		LinkedIn:     p.User.LinkedIn,
 		CreatedAt:    p.CreatedAt,
 		UpdatedAt:    p.UpdatedAt,
+		Categories:   p.Category,
 	}
 }
 
