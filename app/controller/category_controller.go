@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go-blog-api/app/http/security"
 	"go-blog-api/app/lib"
 	"go-blog-api/app/model"
 	"go-blog-api/app/repository"
-	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"go-blog-api/app/utils"
 	"net/http"
@@ -17,9 +17,9 @@ import (
 type categoryController struct {
 	categoryService service.CategoryService
 	userService     service.UserService
-	roleService     service.RoleService
-	redis           security.Interface
-	auth            security.TokenInterface
+	roleService service.RoleService
+	redis       security.Interface
+	auth        security.TokenInterface
 }
 
 type CategoryController interface {

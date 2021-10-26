@@ -10,7 +10,7 @@ type Article struct {
 	BaseInt
 	ArticleAPI
 	BaseImage
-	UserID     *uuid.UUID  `json:"user_id,omitempty"`
+	UserID   *uuid.UUID  `json:"user_id,omitempty"`
 	User     *User       `json:"author,omitempty"`
 	Category *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
 }

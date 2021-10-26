@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"go-blog-api/app/security/google/serviceaccount"
+	"go-blog-api/app/http/security/google/serviceaccount"
 	"google.golang.org/api/drive/v3"
 	"google.golang.org/api/option"
 )

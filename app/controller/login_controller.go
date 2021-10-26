@@ -3,12 +3,13 @@ package controller
 import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go-blog-api/app/http/security"
 	"go-blog-api/app/lib"
 	"go-blog-api/app/model"
 	"go-blog-api/app/repository"
-	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"net/http"
 	"os"
@@ -79,6 +80,11 @@ func (l *loginController) Login(c *gin.Context) {
 	userData := make(map[string]interface{})
 	userData["access_token"] = ts.AccessToken
 	userData["refresh_token"] = ts.RefreshToken
+	//c.SetCookie("token", ts.AccessToken, "", "", "", "", "")
+	session := sessions.Default(c)
+	session.Set("at", ts.AccessToken)
+	session.Set("rt", ts.RefreshToken)
+	session.Save()
 	c.JSON(http.StatusOK, userData)
 }
 

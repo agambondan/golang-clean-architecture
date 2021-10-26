@@ -1,14 +1,15 @@
 package http
 
 import (
+	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"go-blog-api/app/config"
 	"go-blog-api/app/controller"
 	"go-blog-api/app/http/middlewares"
+	"go-blog-api/app/http/security"
+	"go-blog-api/app/http/security/google/oauth"
+	"go-blog-api/app/pages/view"
 	"go-blog-api/app/repository"
-	"go-blog-api/app/security"
-	"go-blog-api/app/security/google/oauth"
-	"go-blog-api/app/utils/pages/view"
 	"log"
 	"net/http"
 )
@@ -24,6 +25,10 @@ func (server *Server) routes(repositories *repository.Repositories) {
 		log.Fatal(err)
 	}
 	newToken := security.NewToken()
+	newCookies, err := security.NewCookies()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	newRoleController := controller.NewRoleController(repositories, newRedisDB.Auth, newToken)
 	newUserController := controller.NewUserController(repositories, newRedisDB.Auth, newToken)
@@ -34,7 +39,11 @@ func (server *Server) routes(repositories *repository.Repositories) {
 
 	routes := server.Router
 
-	//public := routes.Group("/api/v1")
+	public := routes.Group("/api/v1")
+	public.Use(sessions.Sessions("public", newCookies.Store))
+
+	public.GET("/articles")
+
 	//Home Routing
 	routes.GET("/", func(context *gin.Context) {
 		context.JSON(http.StatusOK, gin.H{"message": "Hello World"})
@@ -46,11 +55,13 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	routes.GET("/oauth/google/callback", oauth.CallBackFromGoogle)
 
 	// Auth Login API
-	routes.POST("/login", middlewares.CORSMiddleware(), newLoginController.Login)
-	routes.POST("/logout", middlewares.CORSMiddleware(), newLoginController.Logout)
-	routes.POST("/refresh", middlewares.AuthMiddleware(), newLoginController.Refresh)
-	routes.GET("/verify", middlewares.CORSMiddleware(), newLoginController.Verify)
-	routes.GET("/verify/role", middlewares.CORSMiddleware(), newLoginController.VerifyRole)
+	auth := routes.Group("/auth")
+	auth.Use(sessions.Sessions("auth", newCookies.Store))
+	auth.POST("/login", middlewares.CORSMiddleware(), newLoginController.Login)
+	auth.POST("/logout", middlewares.CORSMiddleware(), newLoginController.Logout)
+	auth.POST("/refresh", middlewares.IsTokenValid(), newLoginController.Refresh)
+	auth.GET("/verify", middlewares.CORSMiddleware(), newLoginController.Verify)
+	auth.GET("/verify/role", middlewares.CORSMiddleware(), newLoginController.VerifyRole)
 
 	// Google Drive API
 
@@ -63,12 +74,12 @@ func (server *Server) routes(repositories *repository.Repositories) {
 	//routes.GET("/camera", broadcast)
 
 	// Role API
-	routes.POST("/roles", middlewares.AuthMiddleware(), newRoleController.SaveRole)
-	routes.GET("/roles", middlewares.AuthMiddleware(), newRoleController.GetRoles)
-	routes.GET("/roles/:id", middlewares.AuthMiddleware(), newRoleController.GetRole)
-	routes.PUT("/roles/:id", middlewares.AuthMiddleware(), newRoleController.UpdateRole)
-	routes.DELETE("/roles/:id", middlewares.AuthMiddleware(), newRoleController.DeleteRole)
-	routes.GET("/roles/count", middlewares.AuthMiddleware(), newRoleController.CountRoles)
+	routes.POST("/roles", middlewares.IsTokenValid(), newRoleController.SaveRole)
+	routes.GET("/roles", middlewares.IsTokenValid(), newRoleController.GetRoles)
+	routes.GET("/roles/:id", middlewares.IsTokenValid(), newRoleController.GetRole)
+	routes.PUT("/roles/:id", middlewares.IsTokenValid(), newRoleController.UpdateRole)
+	routes.DELETE("/roles/:id", middlewares.IsTokenValid(), newRoleController.DeleteRole)
+	routes.GET("/roles/count", middlewares.IsTokenValid(), newRoleController.CountRoles)
 
 	// Users API
 	routes.POST("/users", middlewares.CORSMiddleware(), newUserController.SaveUser)

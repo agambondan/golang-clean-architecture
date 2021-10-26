@@ -3,8 +3,8 @@ package utils
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"go-blog-api/app/http/security"
 	"go-blog-api/app/model"
-	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"strings"
 )

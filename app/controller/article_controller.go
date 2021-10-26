@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"go-blog-api/app/http/security"
 	"go-blog-api/app/lib"
 	"go-blog-api/app/model"
 	"go-blog-api/app/repository"
-	"go-blog-api/app/security"
 	"go-blog-api/app/service"
 	"go-blog-api/app/utils"
 	"net/http"
@@ -17,9 +17,9 @@ import (
 
 type articleController struct {
 	articleService service.ArticleService
-	userService    service.UserService
-	redis          security.Interface
-	auth           security.TokenInterface
+	userService service.UserService
+	redis       security.Interface
+	auth        security.TokenInterface
 }
 
 type ArticleController interface {

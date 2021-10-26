@@ -170,4 +170,3 @@ func CreateUploadPhotoMachine(c *gin.Context, userId string, pathFolder string) 
 	}
 	return filenames, err
 }
-
