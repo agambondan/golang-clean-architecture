@@ -37,7 +37,7 @@ func (a *articleRepo) Save(article *model.Article) (*model.Article, error) {
 
 func (a *articleRepo) FindAll(limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.Preload("User").Preload("Category").Find(&articles).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Categories").Offset(offset).Limit(limit).Find(&articles); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -45,7 +45,7 @@ func (a *articleRepo) FindAll(limit, offset int) (*[]model.Article, error) {
 
 func (a *articleRepo) FindById(id int64) (*model.Article, error) {
 	var article *model.Article
-	if tx := a.db.Preload("User").Preload("Category").First(&article, id); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Categories").First(&article, id); tx.Error != nil {
 		return article, tx.Error
 	}
 	return article, nil
@@ -53,7 +53,7 @@ func (a *articleRepo) FindById(id int64) (*model.Article, error) {
 
 func (a *articleRepo) FindByTitle(title string) (*model.Article, error) {
 	var article *model.Article
-	if tx := a.db.Preload("User").Preload("Category").First(&article, "article.title = ?", title); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Categories").First(&article, "article.title = ?", title); tx.Error != nil {
 		return article, tx.Error
 	}
 	return article, nil
@@ -61,7 +61,7 @@ func (a *articleRepo) FindByTitle(title string) (*model.Article, error) {
 
 func (a *articleRepo) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.Preload("User").Preload("Category").Find(&articles, "article.user_id = ?", uuid).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Categories").Offset(offset).Limit(limit).Find(&articles, "article.user_id = ?", uuid); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -69,7 +69,7 @@ func (a *articleRepo) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]mod
 
 func (a *articleRepo) FindAllByUsername(username string, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.Preload("User").Preload("Category").Find(&articles, "u.username = ?", username).Offset(offset).Limit(limit); tx.Error != nil {
+	if tx := a.db.Preload("User").Preload("Categories").Offset(offset).Limit(limit).Find(&articles, "u.username = ?", username); tx.Error != nil {
 		return articles, tx.Error
 	}
 	return articles, nil
@@ -77,7 +77,7 @@ func (a *articleRepo) FindAllByUsername(username string, limit, offset int) (*[]
 
 func (a *articleRepo) FindAllByCategoryName(name string, limit, offset int) (*[]model.Article, error) {
 	var articles *[]model.Article
-	if tx := a.db.Preload("Category").Preload("User").Joins("join article_categories a_c on article.id = a_c.article_id").
+	if tx := a.db.Preload("Categories").Preload("User").Joins("join article_categories a_c on article.id = a_c.article_id").
 		Joins("join category c on a_c.category_id = c.id").Limit(limit).Offset(offset).Find(&articles, "c.name = ?", &name); tx.Error != nil {
 		return articles, tx.Error
 	}
@@ -87,21 +87,17 @@ func (a *articleRepo) FindAllByCategoryName(name string, limit, offset int) (*[]
 func (a *articleRepo) CountByCategoryName(name string) (int64, error) {
 	var count int64
 	if tx := a.db.Model(&[]model.Article{}).Joins("join article_categories a_c on article.id = a_c.article_id").
-		Joins("join category c on a_c.category_id = c.id").Select("count(article.id)").Count(&count); tx.Error != nil {
+		Joins("join category c on a_c.category_id = c.id").Where("c.name = ?", name).Select("count(article.id)").Count(&count); tx.Error != nil {
 		return count, tx.Error
 	}
 	return count, nil
 }
 
 func (a *articleRepo) UpdateById(id int64, article *model.Article) (*model.Article, error) {
-	findById, err := a.FindById(id)
-	if err != nil {
-		return findById, err
-	}
-	if tx := a.db.Updates(&article); tx.Error != nil {
-		return article, tx.Error
-	}
-	return article, err
+	article.ID = &id
+	a.db.Exec("DELETE FROM article_categories WHERE article_categories.article_id = ?", id)
+	a.db.Updates(&article).Association("Categories")
+	return article, nil
 }
 
 func (a *articleRepo) DeleteById(id int64) error {
@@ -115,6 +111,6 @@ func (a *articleRepo) DeleteById(id int64) error {
 
 func (a *articleRepo) Count() (int64, error) {
 	var count int64
-	a.db.Table("article").Select("id").Count(&count)
+	a.db.Table("article").Select("id").Where("deleted_at is null").Count(&count)
 	return count, nil
 }

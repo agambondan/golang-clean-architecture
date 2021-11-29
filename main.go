@@ -8,15 +8,16 @@ import (
 )
 
 var (
-	server      http.Server
-	configure   config.Configuration
-	pathFileEnv = "./.env"
+	server             http.Server
+	configure          config.Configuration
+	pathFileEnv        = "./.env"
+	pathFileEnvExample = "./.env.example"
 )
 
 func init() {
 	if err := godotenv.Load(pathFileEnv); err != nil {
 		log.Println("no env gotten")
-		if err = godotenv.Load("./.env.example"); err != nil {
+		if err = godotenv.Load(pathFileEnvExample); err != nil {
 			log.Println("no env gotten")
 		}
 	}

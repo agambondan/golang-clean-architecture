@@ -2,7 +2,7 @@ package serviceaccount
 
 import (
 	"context"
-	"encoding/json"
+	"go-blog-api/app/lib"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/drive/v3"
@@ -22,10 +22,7 @@ func NewServiceAccount(secretFile string) *http.Client {
 		Email      string `json:"client_email"`
 		PrivateKey string `json:"private_key"`
 	}{}
-	err = json.Unmarshal(b, &s)
-	if err != nil {
-		log.Println(err)
-	}
+	lib.Merge(b, &s)
 	config := &jwt.Config{
 		Email:      s.Email,
 		PrivateKey: []byte(s.PrivateKey),
@@ -47,7 +44,6 @@ func CreateFolder(service *drive.Service, name string, parentId string) (*drive.
 
 	file, err := service.Files.Create(d).Fields("id").Do()
 	if err != nil {
-		log.Println("Could not create dir: " + err.Error())
 		return nil, err
 	}
 
@@ -63,7 +59,6 @@ func CreateFile(service *drive.Service, name string, mimeType string, content io
 	//file, err := service.Files.Create(f).Do()
 	file, err := service.Files.Create(f).Media(content).Do()
 	if err != nil {
-		log.Println("Could not create file: " + err.Error())
 		return nil, err
 	}
 

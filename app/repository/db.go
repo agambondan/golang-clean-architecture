@@ -40,19 +40,14 @@ func NewRepositories(configure config.Configuration) (*Repositories, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Jakarta", configure.DBHost, configure.DBPort, configure.DBUser, configure.DBPassword, configure.DBName)
 	db, err := gorm.Open(postgres.Open(dsn), &gormConfig)
 	if err != nil {
-		log.Println(err)
-	}
-	err = db.Error
-	if err != nil {
-		os.Setenv("","./assets/docs/")
 		fmt.Printf("Cannot connect to %s database url %s\n", configure.DBDriver, dsn)
 		dsn = fmt.Sprint("postgres://cgxtqgoobyvbwk:47465f1dd068148279716e2788dc252a6bb85339d5b2d635d2b4557b5c7e2627@ec2-34-204-128-77.compute-1.amazonaws.com:5432/d594pchn88flmk")
 		db, err = gorm.Open(postgres.Open(dsn), &gormConfig)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalln(err)
 		}
 		if db.Error != nil {
-			log.Fatal(err)
+			log.Fatalln(err)
 		}
 	}
 	if err != nil {

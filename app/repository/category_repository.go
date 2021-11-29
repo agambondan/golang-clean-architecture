@@ -32,7 +32,7 @@ func (c *categoryRepo) Save(category *model.Category) (*model.Category, error) {
 
 func (c *categoryRepo) FindAll(limit, offset int) (*[]model.Category, error) {
 	var categories *[]model.Category
-	c.db.Model(&model.Category{}).Find(&categories).Offset(offset).Limit(limit)
+	c.db.Model(&model.Category{}).Offset(offset).Limit(limit).Find(&categories)
 	return categories, nil
 }
 
@@ -57,7 +57,7 @@ func (c *categoryRepo) UpdateById(id int64, category *model.Category) (*model.Ca
 	if err != nil {
 		return findById, err
 	}
-	category.ID = &id
+	category.ID = findById.ID
 	if tx := c.db.Updates(&category); tx.Error != nil {
 		return category, tx.Error
 	}
@@ -75,6 +75,6 @@ func (c *categoryRepo) DeleteById(id int64) error {
 
 func (c *categoryRepo) Count() (int64, error) {
 	var count int64
-	c.db.Table("category").Select("id").Count(&count)
+	c.db.Table("category").Select("id").Where("deleted_at is null").Count(&count)
 	return count, nil
 }

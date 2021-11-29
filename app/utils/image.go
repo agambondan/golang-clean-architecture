@@ -10,7 +10,6 @@ import (
 	"image"
 	"image/jpeg"
 	"image/png"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,24 +61,20 @@ func WriteImage(userId string, folderName, filename string) *bytes.Buffer {
 	splitFileName := strings.Split(filePath, ".")
 	open, err := os.Open(filePath)
 	if err != nil {
-		log.Println(err)
 		return buffer
 	}
 	defer open.Close()
-	m, s, err := image.Decode(open)
+	m, _, err := image.Decode(open)
 	if err != nil {
-		log.Println(s, err)
 		return buffer
 	}
 	switch strings.ToLower(splitFileName[1]) {
 	case "png":
 		if err := png.Encode(buffer, m); err != nil {
-			log.Println("unable to encode image.")
 			return buffer
 		}
 	case "jpeg", "jpg", "jpe":
 		if err := jpeg.Encode(buffer, m, nil); err != nil {
-			log.Println("unable to encode image.")
 			return buffer
 		}
 	default:

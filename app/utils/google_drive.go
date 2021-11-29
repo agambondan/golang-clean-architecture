@@ -16,7 +16,7 @@ func UploadImageFileToAssets(c *gin.Context, folder, userId, parentId string) (*
 	if err != nil {
 		return driveFile, err
 	}
-	client := serviceaccount.NewServiceAccount("./assets/docs/credentials-web-go-blog-service-account.json")
+	client := serviceaccount.NewServiceAccount("./app/config/credentials-web-go-blog-service-account.json")
 	service, err := drive.NewService(context.Background(), option.WithHTTPClient(client))
 	if err != nil {
 		return driveFile, err

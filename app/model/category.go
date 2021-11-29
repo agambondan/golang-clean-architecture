@@ -8,7 +8,7 @@ type Category struct {
 	BaseInt
 	CategoryAPI
 	BaseImage
-	//Articles *[]Article `json:"articles,omitempty" gorm:"many2many:article_categories"`
+	Articles *[]Article `json:"articles,omitempty" gorm:"many2many:article_categories"`
 }
 
 type CategoryAPI struct {

@@ -6,16 +6,21 @@ import (
 )
 
 // Merge a struct to another struct
-func Merge(from interface{}, to interface{}) error {
-	var err error
-	var j []byte
-	if fmt.Sprintf("%T", from) == "[]byte" {
-		j = from.([]byte)
-	} else {
-		j, err = json.Marshal(from)
+func Merge(from interface{}, to interface{}) (err error) {
+	typeFrom := fmt.Sprintf("%T", from)
+	if typeFrom == "string" {
+		err = json.Unmarshal([]byte(from.(string)), &to)
 		return err
 	}
-	err = json.Unmarshal(j, to)
-
+	var bytes []byte
+	if typeFrom == "[]uint8" {
+		bytes = from.([]byte)
+	} else {
+		bytes, err = json.Marshal(from)
+		if err != nil {
+			return err
+		}
+	}
+	err = json.Unmarshal(bytes, &to)
 	return err
 }

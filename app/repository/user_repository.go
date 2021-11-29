@@ -3,10 +3,8 @@ package repository
 import (
 	"fmt"
 	"github.com/google/uuid"
-	"go-blog-api/app/lib"
 	"go-blog-api/app/model"
 	"gorm.io/gorm"
-	"os"
 )
 
 type UserRepository interface {
@@ -31,12 +29,6 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 }
 
 func (u *userRepo) Save(user *model.User) (*model.User, error) {
-	cipherEncrypt, err := lib.CipherEncrypt([]byte(*user.Password), []byte(os.Getenv("CIPHER_KEY")))
-	if err != nil {
-		return user, err
-	}
-	cipherEncryptString := fmt.Sprintf("%x", cipherEncrypt)
-	user.Password = &cipherEncryptString
 	if tx := u.db.Create(&user); tx.Error != nil {
 		return user, tx.Error
 	}
@@ -92,13 +84,7 @@ func (u *userRepo) FindUserByEmailOrUsername(userToken *model.User) (*model.User
 }
 
 func (u *userRepo) UpdateById(uuid *uuid.UUID, user *model.User) (*model.User, error) {
-	cipherEncrypt, err := lib.CipherEncrypt([]byte(*user.Password), []byte(os.Getenv("CIPHER_KEY")))
-	if err != nil {
-		return user, err
-	}
-	cipherEncryptString := fmt.Sprintf("%x", cipherEncrypt)
-	user.Password = &cipherEncryptString
-	_, err = u.FindById(uuid)
+	_, err := u.FindById(uuid)
 	if err != nil {
 		return user, err
 	}

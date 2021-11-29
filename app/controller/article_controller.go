@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -17,9 +16,9 @@ import (
 
 type articleController struct {
 	articleService service.ArticleService
-	userService service.UserService
-	redis       security.Interface
-	auth        security.TokenInterface
+	userService    service.UserService
+	redis          security.Interface
+	auth           security.TokenInterface
 }
 
 type ArticleController interface {
@@ -50,38 +49,30 @@ func (p *articleController) SaveArticle(ctx *gin.Context) {
 		ctx.JSON(http.StatusUnauthorized, err)
 		return
 	}
-	contentType := ctx.ContentType()
-	if contentType != "application/json" {
-		var articleCategories *model.Article
-		data := ctx.PostForm("data")
-		err = json.Unmarshal([]byte(data), &articleCategories)
-		if err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
-		article.Category = articleCategories.Category
-		err = json.Unmarshal([]byte(data), &articleAPI)
-		if err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
-	} else {
-		if err = ctx.ShouldBindJSON(&article); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
+	var articleCategories *model.Article
+	data := ctx.PostForm("data")
+	err = lib.Merge(data, &articleCategories)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, lib.BuildErrorResponse("invalid json", err.Error(), nil))
+		return
+	}
+	article.Categories = articleCategories.Categories
+	err = lib.Merge(data, &articleAPI)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, lib.BuildErrorResponse("invalid json", err.Error(), nil))
+		return
 	}
 	_ = lib.Merge(articleAPI, &article)
 	validate := article.Validate("")
 	if len(validate) != 0 {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("fill your empty field", "field can't empty", validate))
 		return
 	}
 	fileHeader, _ := ctx.FormFile("images")
-	if contentType != "application/json" && fileHeader.Filename != "" {
+	if fileHeader.Filename != "" {
 		uploadFile, err := utils.UploadImageFileToAssets(ctx, "article", checkIdUser.ID.String(), utils.DriveImagesId)
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed upload image to google drive", "user failed to created", article))
+			ctx.JSON(http.StatusInternalServerError, lib.BuildErrorResponse("failed upload image to google drive", "user failed to created", article))
 			return
 		}
 		article.Image = &uploadFile.Name
@@ -90,24 +81,24 @@ func (p *articleController) SaveArticle(ctx *gin.Context) {
 		article.ThumbnailURL = &uploadFile.ThumbnailLink
 		validate = article.Validate("images")
 		if len(validate) != 0 {
-			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
+			ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("fill your empty field", "field can't empty", validate))
 			return
 		}
 	}
 	article.UserID = checkIdUser.ID
 	_, err = p.articleService.Create(&article)
 	if err != nil {
-		ctx.JSON(http.StatusConflict, model.BuildErrorResponse("failed create article", err.Error(), nil))
+		ctx.JSON(http.StatusConflict, lib.BuildErrorResponse("failed create article", err.Error(), nil))
 		return
 	}
-	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+	ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article))
 }
 
 func (p *articleController) GetArticles(ctx *gin.Context) {
 	limit, offset := utils.GetLimitOffsetParam(ctx)
 	articles, err := p.articleService.FindAll(limit, offset)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("articles not found", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("articles not found", err.Error(), nil))
 		return
 	}
 	var articlesType *model.Articles
@@ -115,10 +106,10 @@ func (p *articleController) GetArticles(ctx *gin.Context) {
 	_ = lib.Merge(articles, &articlesType)
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articles))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -126,27 +117,27 @@ func (p *articleController) GetArticle(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("id must number", err.Error(), nil))
 		return
 	}
 	article, err := p.articleService.FindById(int64(id))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("article not found", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
 	userFindById, err := p.userService.FindById(article.UserID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("user who created article not found", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("user who created article not found", err.Error(), nil))
 		return
 	}
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	article.User = userFindById
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 || article.UserID == checkIdUser.ID {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article.PublicArticle()))
 	}
 }
 
@@ -154,21 +145,21 @@ func (p *articleController) GetArticleByTitle(ctx *gin.Context) {
 	title := ctx.Param("title")
 	article, err := p.articleService.FindByTitle(title)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("article not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
 	_, err = p.userService.FindById(article.UserID)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("article not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 || article.UserID == checkIdUser.ID {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article.PublicArticle()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article.PublicArticle()))
 	}
 }
 
@@ -178,7 +169,7 @@ func (p *articleController) GetArticlesByUserId(ctx *gin.Context) {
 	limit, offset := utils.GetLimitOffsetParam(ctx)
 	articles, err := p.articleService.FindAllByUserId(id, limit, offset)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("articles not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("articles not found", err.Error(), nil))
 		return
 	}
 	var articlesType *model.Articles
@@ -186,10 +177,10 @@ func (p *articleController) GetArticlesByUserId(ctx *gin.Context) {
 	_ = lib.Merge(articles, &articlesType)
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articles))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -198,7 +189,7 @@ func (p *articleController) GetArticlesByUsername(ctx *gin.Context) {
 	limit, offset := utils.GetLimitOffsetParam(ctx)
 	articles, err := p.articleService.FindAllByUsername(username, limit, offset)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("articles not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("articles not found", err.Error(), nil))
 		return
 	}
 	var articlesType *model.Articles
@@ -206,10 +197,10 @@ func (p *articleController) GetArticlesByUsername(ctx *gin.Context) {
 	_ = lib.Merge(articles, &articlesType)
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articles))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -218,7 +209,7 @@ func (p *articleController) GetArticlesByCategoryName(ctx *gin.Context) {
 	name := ctx.Param("name")
 	articles, err := p.articleService.FindAllByCategoryName(name, limit, offset)
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("articles not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("articles not found", err.Error(), nil))
 		return
 	}
 	var articlesType *model.Articles
@@ -226,10 +217,10 @@ func (p *articleController) GetArticlesByCategoryName(ctx *gin.Context) {
 	_ = lib.Merge(articles, &articlesType)
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 {
-			ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articles))
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articles))
 		}
 	} else {
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", articlesType.PublicArticles()))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articlesType.PublicArticles()))
 	}
 }
 
@@ -247,97 +238,97 @@ func (p *articleController) GetCountArticlesByCategoryName(ctx *gin.Context) {
 func (p *articleController) UpdateArticle(ctx *gin.Context) {
 	var article model.Article
 	var articleAPI model.ArticleAPI
+	var articleCategories *model.Article
+	// Get User by Token
 	checkIdUser, err := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
+		ctx.JSON(http.StatusUnauthorized, lib.BuildErrorResponse("unauthorized", err.Error(), nil))
 		return
 	}
+	// Get ID
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("id must number", err.Error(), nil))
 		return
 	}
+	// Check if the user is the same
 	articleFindById, err := p.articleService.FindById(int64(id))
 	if err != nil {
-		ctx.JSON(http.StatusNotFound, model.BuildErrorResponse("article not found", err.Error(), nil))
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
-	if articleFindById.UserID != checkIdUser.ID {
-		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", "user id not equals with article", nil))
+	if articleFindById.UserID.String() != checkIdUser.ID.String() {
+		ctx.JSON(http.StatusUnauthorized, lib.BuildErrorResponse("unauthorized", "user id not equals with article", nil))
 		return
 	}
-	contentType := ctx.ContentType()
-	if contentType != "application/json" {
-		data := ctx.PostForm("data")
-		if err = json.Unmarshal([]byte(data), &articleAPI); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
-	} else {
-		if err = ctx.ShouldBindJSON(&article); err != nil {
-			ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("invalid json", err.Error(), nil))
-			return
-		}
+	// Binding data from form to struct
+	data := ctx.PostForm("data")
+	err = lib.Merge(data, &articleCategories)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, lib.BuildErrorResponse("invalid json", err.Error(), nil))
+		return
+	}
+	if err = lib.Merge(data, &articleAPI); err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, lib.BuildErrorResponse("invalid json", err.Error(), nil))
+		return
 	}
 	_ = lib.Merge(articleAPI, &article)
+	article.Categories = articleCategories.Categories
+	// Validator
 	validate := article.Validate("")
 	if len(validate) != 0 {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("fill your empty field", "field can't empty", validate))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("fill your empty field", "field can't empty", validate))
 		return
+	}
+	// Get Images
+	fileHeader, _ := ctx.FormFile("images")
+	if fileHeader != nil {
+		if fileHeader.Filename != "" {
+			uploadFile, err := utils.UploadImageFileToAssets(ctx, "article", checkIdUser.ID.String(), utils.DriveImagesId)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, lib.BuildErrorResponse("failed upload image to google drive", "user failed to created", article))
+				return
+			}
+			article.CreatedAt = articleFindById.CreatedAt
+			article.Image = &uploadFile.Name
+			imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
+			article.ImageURL = &imageURL
+			article.ThumbnailURL = &uploadFile.ThumbnailLink
+		}
 	}
 	_, err = p.articleService.UpdateById(int64(id), &article)
-	if err != nil {
-		ctx.JSON(http.StatusUnprocessableEntity, model.BuildErrorResponse("can't update article", err.Error(), article))
-		return
-	}
-	fileHeader, _ := ctx.FormFile("images")
-	if contentType != "application/json" && fileHeader.Filename != "" {
-		uploadFile, err := utils.UploadImageFileToAssets(ctx, "article", checkIdUser.ID.String(), utils.DriveImagesId)
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, model.BuildErrorResponse("failed upload image to google drive", "user failed to created", article))
-			return
-		}
-		article.CreatedAt = articleFindById.CreatedAt
-		article.Image = &uploadFile.Name
-		imageURL := fmt.Sprintf("https://drive.google.com/uc?export=view&id=%s", uploadFile.Id)
-		article.ImageURL = &imageURL
-		article.ThumbnailURL = &uploadFile.ThumbnailLink
-		_, err = p.articleService.UpdateById(int64(id), &article)
-	}
-	ctx.JSON(http.StatusOK, model.BuildResponse(true, "success", article))
+	ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article))
 
 }
 
 func (p *articleController) DeleteArticle(ctx *gin.Context) {
 	checkIdUser, err := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
+		ctx.JSON(http.StatusUnauthorized, lib.BuildErrorResponse("unauthorized", err.Error(), nil))
 		return
 	}
 	idParam := ctx.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("id must number", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("id must number", err.Error(), nil))
 		return
 	}
 	articleFindById, err := p.articleService.FindById(int64(id))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("article not found", err.Error(), nil))
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
-	if articleFindById.UserID != checkIdUser.ID {
-		ctx.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", "user id not equals with article", nil))
-		return
-	} else {
+	if articleFindById.UserID == checkIdUser.ID || *checkIdUser.Role.Name == "admin" {
 		err = p.articleService.DeleteById(int64(id))
 		if err != nil {
-			ctx.JSON(http.StatusBadRequest, model.BuildErrorResponse("article not found", err.Error(), nil))
+			ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("article not found", err.Error(), nil))
 			return
 		}
-		ctx.JSON(http.StatusOK, model.BuildResponse(true, "successfully delete article", nil))
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "successfully delete article", nil))
 		return
 	}
+	ctx.JSON(http.StatusUnauthorized, lib.BuildErrorResponse("unauthorized", "user id not equals with article", nil))
 }
 
 func (p *articleController) CountArticles(ctx *gin.Context) {
@@ -346,5 +337,5 @@ func (p *articleController) CountArticles(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, count)
+	ctx.JSON(http.StatusOK, lib.BuildResponse(true, "Success", count))
 }

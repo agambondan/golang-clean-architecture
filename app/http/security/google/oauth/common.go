@@ -23,7 +23,6 @@ func HandleLogin(ctx *gin.Context, oauthConf *oauth2.Config, oauthStateString st
 	if err != nil {
 		log.Printf("\nError : %v", err)
 	}
-	log.Println(URL)
 	parameters := url.Values{}
 	parameters.Add("client_id", oauthConf.ClientID)
 	parameters.Add("scope", strings.Join(oauthConf.Scopes, " "))
@@ -33,7 +32,6 @@ func HandleLogin(ctx *gin.Context, oauthConf *oauth2.Config, oauthStateString st
 	parameters.Add("access_type", "offline")
 	URL.RawQuery = parameters.Encode()
 	url := URL.String()
-	log.Println(url)
 	ctx.Redirect(http.StatusFound, url)
 }
 

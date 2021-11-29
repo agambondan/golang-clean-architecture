@@ -7,13 +7,15 @@ import (
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"io"
-	"log"
+	"math/big"
+	mathRand "math/rand"
+	"strings"
 )
 
 func HashAndSalt(pwd []byte) string {
 	hash, err := bcrypt.GenerateFromPassword(pwd, bcrypt.MinCost)
 	if err != nil {
-		log.Println(err)
+		return string(hash)
 	}
 	return string(hash)
 }
@@ -22,14 +24,55 @@ func ComparePasswords(hashedPwd string, plainPwd []byte) bool {
 	byteHash := []byte(hashedPwd)
 	err := bcrypt.CompareHashAndPassword(byteHash, plainPwd)
 	if err != nil {
-		log.Println(err)
 		return false
 	}
 	return true
 }
 
-func CipherEncrypt(plaintext []byte, key []byte) ([]byte, error) {
-	c, err := aes.NewCipher(key)
+// GeneratePassword for generate random password
+func GeneratePassword(passwordLength, minSpecialChar, minNum, minUpperCase int) string {
+	var (
+		lowerCharSet   = "abcdefghijklmnopqrstuvwxyz"
+		upperCharSet   = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		specialCharSet = "!@#$%&*"
+		numberSet      = "0123456789"
+		allCharSet     = lowerCharSet + upperCharSet + specialCharSet + numberSet
+	)
+	var password strings.Builder
+
+	//Set special character
+	for i := 0; i < minSpecialChar; i++ {
+		random, _ := rand.Int(rand.Reader, big.NewInt(int64(len(specialCharSet))))
+		password.WriteString(string(specialCharSet[random.BitLen()]))
+	}
+
+	//Set numeric
+	for i := 0; i < minNum; i++ {
+		random, _ := rand.Int(rand.Reader, big.NewInt(int64(len(numberSet))))
+		password.WriteString(string(numberSet[random.BitLen()]))
+	}
+
+	//Set uppercase
+	for i := 0; i < minUpperCase; i++ {
+		random, _ := rand.Int(rand.Reader, big.NewInt(int64(len(upperCharSet))))
+		password.WriteString(string(upperCharSet[random.BitLen()]))
+	}
+
+	remainingLength := passwordLength - minSpecialChar - minNum - minUpperCase
+	for i := 0; i < remainingLength; i++ {
+		random, _ := rand.Int(rand.Reader, big.NewInt(int64(len(allCharSet))))
+		password.WriteString(string(allCharSet[random.BitLen()]))
+	}
+	inRune := []rune(password.String())
+	mathRand.Shuffle(len(inRune), func(i, j int) {
+		inRune[i], inRune[j] = inRune[j], inRune[i]
+	})
+	return string(inRune)
+}
+
+// CipherEncrypt for encrypt data with AES algorithm
+func CipherEncrypt(plaintext, key string) ([]byte, error) {
+	c, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +84,12 @@ func CipherEncrypt(plaintext []byte, key []byte) ([]byte, error) {
 	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
 		return nil, err
 	}
-	return gcm.Seal(nonce, nonce, plaintext, nil), nil
+	return gcm.Seal(nonce, nonce, []byte(plaintext), nil), nil
 }
 
-func CipherDecrypt(ciphertext []byte, key []byte) ([]byte, error) {
-	c, err := aes.NewCipher(key)
+// CipherDecrypt for decrypt data with AES algorithm
+func CipherDecrypt(ciphertext []byte, key string) ([]byte, error) {
+	c, err := aes.NewCipher([]byte(key))
 	if err != nil {
 		return nil, err
 	}

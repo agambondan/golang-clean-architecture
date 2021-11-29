@@ -2,7 +2,6 @@ package oauth
 
 import (
 	"github.com/gin-gonic/gin"
-	"log"
 	"net/http"
 )
 
@@ -19,13 +18,11 @@ CallBackFromGoogle Function
 func CallBackFromGoogle(c *gin.Context) {
 	state := c.Request.FormValue("state")
 	if state != "state-token" {
-		log.Println("invalid oauth state, expected " + "state-token" + ", got " + state + "\n")
 		c.Redirect(http.StatusBadRequest, "/")
 		return
 	}
 	code := c.Request.FormValue("code")
 	if code == "" {
-		log.Println("Code not found..")
 		c.Writer.Write([]byte("Code Not Found to provide AccessToken..\n"))
 		reason := c.Request.FormValue("error_reason")
 		if reason == "user_denied" {

@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/google/uuid"
+	"go-blog-api/app/lib"
 	"strings"
 	"time"
 )
@@ -12,7 +13,7 @@ type Article struct {
 	BaseImage
 	UserID   *uuid.UUID  `json:"user_id,omitempty"`
 	User     *User       `json:"author,omitempty"`
-	Category *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
+	Categories *[]Category `json:"categories,omitempty" gorm:"many2many:article_categories"`
 }
 
 type ArticleAPI struct {
@@ -21,6 +22,7 @@ type ArticleAPI struct {
 }
 
 type PublicArticle struct {
+	ID           *int64      `json:"id,omitempty"`
 	Title        *string     `json:"title,omitempty"`
 	Description  *string     `json:"description,omitempty"`
 	Image        *string     `json:"image,omitempty"`
@@ -52,25 +54,15 @@ func (posts Articles) PublicArticles() []interface{} {
 }
 
 func (p *Article) PublicArticle() interface{} {
-	return &PublicArticle{
-		Title:        p.Title,
-		Description:  p.Description,
-		Image:        p.Image,
-		ImageURL:     p.ImageURL,
-		ThumbnailURL: p.ThumbnailURL,
-		FirstName:    p.User.FirstName,
-		LastName:     p.User.LastName,
-		Username:     p.User.Username,
-		UserImage:    p.User.Image,
-		UserImageURL: p.User.ImageURL,
-		Instagram:    p.User.Instagram,
-		Facebook:     p.User.Facebook,
-		Twitter:      p.User.Twitter,
-		LinkedIn:     p.User.LinkedIn,
-		CreatedAt:    p.CreatedAt,
-		UpdatedAt:    p.UpdatedAt,
-		Categories:   p.Category,
-	}
+	publicArticle := &PublicArticle{}
+	lib.Merge(p, &publicArticle)
+	lib.Merge(p.User, &publicArticle)
+	publicArticle.Image = p.Image
+	publicArticle.ImageURL = p.ImageURL
+	publicArticle.UserImage = p.User.Image
+	publicArticle.UserImageURL = p.User.ImageURL
+	lib.Merge(p.Categories, &publicArticle.Categories)
+	return publicArticle
 }
 
 func (p *Article) Validate(action string) map[string]string {
@@ -80,20 +72,24 @@ func (p *Article) Validate(action string) map[string]string {
 		if p.ImageURL != nil || p.ThumbnailURL != nil {
 			if *p.ImageURL == "" || len(*p.ImageURL) < 45 || *p.ThumbnailURL == "" {
 				errorMessages["image"] = "image url is required"
+				return errorMessages
 			}
 		}
 	default:
 		if p.Title != nil {
 			if *p.Title == "" {
 				errorMessages["title_required"] = "title is required"
+				return errorMessages
 			}
 		} else if p.Description != nil {
 			if *p.Description == "" {
 				errorMessages["desc_required"] = "description is required"
+				return errorMessages
 			}
 		} else if p.UserID != nil {
 			if p.UserID.String() == "" || p.UserID.String() == "null" {
 				errorMessages["user_required"] = "user uuid is required"
+				return errorMessages
 			}
 		}
 	}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"github.com/gin-gonic/gin"
 	"go-blog-api/app/http/security"
-	"go-blog-api/app/model"
+	"go-blog-api/app/lib"
 	"io/ioutil"
 	"net/http"
 )
@@ -13,7 +13,7 @@ func IsTokenValid() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		err := security.TokenValid(c.Request)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, model.BuildErrorResponse("unauthorized", err.Error(), nil))
+			c.JSON(http.StatusUnauthorized, lib.BuildErrorResponse("unauthorized", err.Error(), nil))
 			c.Abort()
 			return
 		}
@@ -43,7 +43,6 @@ func MaxSizeAllowed(n int64) gin.HandlerFunc {
 		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, n)
 		buff, errRead := c.GetRawData()
 		if errRead != nil {
-			//c.JSON(http.StatusRequestEntityTooLarge,"too large")
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{
 				"status":     http.StatusRequestEntityTooLarge,
 				"upload_err": "too large: upload an image less than 8MB",

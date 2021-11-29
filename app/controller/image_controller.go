@@ -9,7 +9,6 @@ import (
 	"go-blog-api/app/repository"
 	"go-blog-api/app/service"
 	"go-blog-api/app/utils"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -58,7 +57,6 @@ func (i *imageController) GetImagesByUsername(ctx *gin.Context) {
 		ctx.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 		if _, err := ctx.Writer.Write(buffer.Bytes()); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"message": "unable to write image."})
-			log.Println("unable to write image.")
 			return
 		}
 	}
@@ -85,7 +83,6 @@ func (i *imageController) GetImagesByArticleTitle(ctx *gin.Context) {
 		ctx.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 		if _, err := ctx.Writer.Write(buffer.Bytes()); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"message": "unable to write image."})
-			log.Println("unable to write image.")
 			return
 		}
 	}
@@ -112,7 +109,6 @@ func (i *imageController) GetImagesByCategoryName(ctx *gin.Context) {
 		ctx.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 		if _, err := ctx.Writer.Write(buffer.Bytes()); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"message": "unable to write image."})
-			log.Println("unable to write image.")
 			return
 		}
 	}
@@ -165,7 +161,6 @@ func (i *imageController) GetImages(ctx *gin.Context) {
 		ctx.Writer.Header().Set("Content-Length", strconv.Itoa(len(buffer.Bytes())))
 		if _, err := ctx.Writer.Write(buffer.Bytes()); err != nil {
 			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"message": "unable to write image."})
-			log.Println("unable to write image.")
 			return
 		}
 	}
