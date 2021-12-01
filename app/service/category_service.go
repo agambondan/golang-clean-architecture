@@ -17,6 +17,7 @@ func NewCategoryService(repo repository.CategoryRepository) CategoryService {
 type CategoryService interface {
 	Create(category *model.Category) (*model.Category, error)
 	FindAll(limit, offset int) (*[]model.Category, error)
+	FindAllByWord(word string, limit, offset int) (*[]model.Category, error)
 	FindById(id int64) (*model.Category, error)
 	FindByName(name string) (*model.Category, error)
 	UpdateById(id int64, category *model.Category) (*model.Category, error)
@@ -30,6 +31,10 @@ func (p *categoryService) Create(category *model.Category) (*model.Category, err
 
 func (p *categoryService) FindAll(limit, offset int) (*[]model.Category, error) {
 	return p.category.FindAll(limit, offset)
+}
+
+func (p *categoryService) FindAllByWord(word string, limit, offset int) (*[]model.Category, error) {
+	return p.category.FindAllByWord(word, limit, offset)
 }
 
 func (p *categoryService) FindById(id int64) (*model.Category, error) {

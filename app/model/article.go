@@ -55,8 +55,8 @@ func (posts Articles) PublicArticles() []interface{} {
 
 func (p *Article) PublicArticle() interface{} {
 	publicArticle := &PublicArticle{}
-	lib.Merge(p, &publicArticle)
 	lib.Merge(p.User, &publicArticle)
+	lib.Merge(p, &publicArticle)
 	publicArticle.Image = p.Image
 	publicArticle.ImageURL = p.ImageURL
 	publicArticle.UserImage = p.User.Image

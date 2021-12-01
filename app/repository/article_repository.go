@@ -11,6 +11,7 @@ type ArticleRepository interface {
 	FindAll(limit, offset int) (*[]model.Article, error)
 	FindById(id int64) (*model.Article, error)
 	FindByTitle(title string) (*model.Article, error)
+	FindAllArticleByWord(search string, limit, offset int) (*[]model.Article, error)
 	FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error)
 	FindAllByUsername(username string, limit, offset int) (*[]model.Article, error)
 	FindAllByCategoryName(name string, limit, offset int) (*[]model.Article, error)
@@ -57,6 +58,15 @@ func (a *articleRepo) FindByTitle(title string) (*model.Article, error) {
 		return article, tx.Error
 	}
 	return article, nil
+}
+
+func (a *articleRepo) FindAllArticleByWord(search string, limit, offset int) (*[]model.Article, error) {
+	var articles *[]model.Article
+	if tx := a.db.Preload("User").Preload("Categories").Joins("join article_categories a_c on article.id = a_c.article_id").
+		Joins("join category c on a_c.category_id = c.id").Where("article.description LIKE ? or article.title LIKE ? or c.name LIKE ?", "%"+search+"%", "%"+search+"%", "%"+search+"%").Offset(offset).Limit(limit).Group("article.id").Find(&articles); tx.Error != nil {
+		return articles, tx.Error
+	}
+	return articles, nil
 }
 
 func (a *articleRepo) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error) {

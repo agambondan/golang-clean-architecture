@@ -26,6 +26,7 @@ type ArticleController interface {
 	GetArticles(c *gin.Context)
 	GetArticle(c *gin.Context)
 	GetArticleByTitle(c *gin.Context)
+	GetArticlesBySearch(c *gin.Context)
 	GetArticlesByUserId(c *gin.Context)
 	GetArticlesByUsername(c *gin.Context)
 	GetArticlesByCategoryName(c *gin.Context)
@@ -125,19 +126,32 @@ func (p *articleController) GetArticle(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("article not found", err.Error(), nil))
 		return
 	}
-	userFindById, err := p.userService.FindById(article.UserID)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("user who created article not found", err.Error(), nil))
-		return
-	}
 	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
-	article.User = userFindById
 	if checkIdUser != nil {
 		if *checkIdUser.RoleId == 1 || article.UserID == checkIdUser.ID {
 			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article))
 		}
 	} else {
 		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", article.PublicArticle()))
+	}
+}
+
+func (p *articleController) GetArticlesBySearch(ctx *gin.Context) {
+	var publicArticles *model.Articles
+	limit, offset := utils.GetLimitOffsetParam(ctx)
+	search := ctx.Query("search")
+	articles, err := p.articleService.FindAllArticleByWord(search, limit, offset)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, lib.BuildErrorResponse("articles not found", err.Error(), nil))
+	}
+	lib.Merge(articles, &publicArticles)
+	checkIdUser, _ := utils.CheckIdUser(p.auth, p.redis, p.userService, ctx)
+	if checkIdUser != nil {
+		if *checkIdUser.RoleId == 1 {
+			ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", articles))
+		}
+	} else {
+		ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", publicArticles.PublicArticles()))
 	}
 }
 

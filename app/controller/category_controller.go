@@ -24,6 +24,7 @@ type categoryController struct {
 type CategoryController interface {
 	SaveCategory(c *gin.Context)
 	GetCategories(c *gin.Context)
+	GetCategoriesByWord(c *gin.Context)
 	GetCategory(c *gin.Context)
 	GetCategoryByName(c *gin.Context)
 	UpdateCategory(c *gin.Context)
@@ -87,6 +88,17 @@ func (c *categoryController) SaveCategory(ctx *gin.Context) {
 func (c *categoryController) GetCategories(ctx *gin.Context) {
 	limit, offset := utils.GetLimitOffsetParam(ctx)
 	categories, err := c.categoryService.FindAll(limit, offset)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("categories not found", err.Error(), nil))
+		return
+	}
+	ctx.JSON(http.StatusOK, lib.BuildResponse(true, "success", categories))
+}
+
+func (c *categoryController) GetCategoriesByWord(ctx *gin.Context) {
+	limit, offset := utils.GetLimitOffsetParam(ctx)
+	search := ctx.Query("search")
+	categories, err := c.categoryService.FindAllByWord(search, limit, offset)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, lib.BuildErrorResponse("categories not found", err.Error(), nil))
 		return

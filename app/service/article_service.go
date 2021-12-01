@@ -20,6 +20,7 @@ type ArticleService interface {
 	FindAll(limit, offset int) (*[]model.Article, error)
 	FindById(id int64) (*model.Article, error)
 	FindByTitle(title string) (*model.Article, error)
+	FindAllArticleByWord(search string, limit, offset int) (*[]model.Article, error)
 	FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error)
 	FindAllByUsername(username string, limit, offset int) (*[]model.Article, error)
 	FindAllByCategoryName(name string, limit, offset int) (*[]model.Article, error)
@@ -43,6 +44,10 @@ func (a *articleService) FindById(id int64) (*model.Article, error) {
 
 func (a *articleService) FindByTitle(title string) (*model.Article, error) {
 	return a.article.FindByTitle(title)
+}
+
+func (a *articleService) FindAllArticleByWord(search string, limit, offset int) (*[]model.Article, error) {
+	return a.article.FindAllArticleByWord(search, limit, offset)
 }
 
 func (a *articleService) FindAllByUserId(uuid uuid.UUID, limit, offset int) (*[]model.Article, error) {

@@ -8,6 +8,7 @@ import (
 type CategoryRepository interface {
 	Save(category *model.Category) (*model.Category, error)
 	FindAll(limit, offset int) (*[]model.Category, error)
+	FindAllByWord(word string, limit, offset int) (*[]model.Category, error)
 	FindById(id int64) (*model.Category, error)
 	FindByName(name string) (*model.Category, error)
 	UpdateById(id int64, category *model.Category) (*model.Category, error)
@@ -33,6 +34,12 @@ func (c *categoryRepo) Save(category *model.Category) (*model.Category, error) {
 func (c *categoryRepo) FindAll(limit, offset int) (*[]model.Category, error) {
 	var categories *[]model.Category
 	c.db.Model(&model.Category{}).Offset(offset).Limit(limit).Find(&categories)
+	return categories, nil
+}
+
+func (c *categoryRepo) FindAllByWord(word string, limit, offset int) (*[]model.Category, error) {
+	var categories *[]model.Category
+	c.db.Model(&model.Category{}).Where("category.name LIKE ?", "%"+word+"%").Offset(offset).Limit(limit).Find(&categories)
 	return categories, nil
 }
 

@@ -116,7 +116,9 @@ func (server *Server) routes(repositories *repository.Repositories) {
 
 		// Slug API
 		routes.GET("/slug/user/:username", middlewares.CORSMiddleware(), newUserController.GetUserByUsername)
+		routes.GET("/slug/categories", middlewares.CORSMiddleware(), newCategoryController.GetCategoriesByWord)
 		routes.GET("/slug/categories/:name", middlewares.CORSMiddleware(), newCategoryController.GetCategoryByName)
+		routes.GET("/slug/articles", middlewares.CORSMiddleware(), newArticleController.GetArticlesBySearch)
 		routes.GET("/slug/articles/:title", middlewares.CORSMiddleware(), newArticleController.GetArticleByTitle)
 	}
 }

@@ -23,11 +23,13 @@ func UploadImageFileToAssets(c *gin.Context, folder, userId, parentId string) (*
 	}
 	if userId != "" {
 		q := fmt.Sprintf("name = '%s' and parents = '%s'", userId, parentId)
+		fmt.Println(q, "LINE 26")
 		fileList, err := service.Files.List().Q(q).Do()
 		if err != nil {
 			return driveFile, err
 		}
 		if len(fileList.Files) == 0 {
+			fmt.Println(fileList.Files[0].Name, "LINE 32")
 			driveFile, err = serviceaccount.CreateFolder(service, userId, parentId)
 			if err != nil {
 				return driveFile, err
@@ -39,7 +41,8 @@ func UploadImageFileToAssets(c *gin.Context, folder, userId, parentId string) (*
 			folderId = driveFile.Id
 		} else {
 			folderId = fileList.Files[0].Id
-			q = fmt.Sprintf("name = 'post' and parents = '%s'", folderId)
+			q = fmt.Sprintf("name = 'article' and parents = '%s'", folderId)
+			fmt.Println(q, "LINE 45")
 			fileList, err = service.Files.List().Q(q).Do()
 			if err != nil {
 				return driveFile, err
